@@ -20,15 +20,19 @@ export default function SignUpPage() {
   useEffect(() => {
     async function checkDb() {
       const supabase = createBrowserSupabase()
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      if (anonKey?.startsWith('sb_') || anonKey?.startsWith('pk_')) {
+        setDbError('CRITICAL CONFIG ERROR: Your NEXT_PUBLIC_SUPABASE_ANON_KEY is a Stripe key. You must replace it with your Supabase Anon Key in .env.local and Vercel Settings.')
+        return
+      }
+
       const { error } = await supabase.from('users').select('id').limit(1)
       if (error) {
         if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
           setDbError('Database setup required: The `public.users` table does not exist.')
         } else if (error.message.includes('JWT') || error.message.includes('Invalid API key')) {
-          const isStripeKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.startsWith('sb_') || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.startsWith('pk_')
-          setDbError(isStripeKey 
-            ? 'Configuration error: Your NEXT_PUBLIC_SUPABASE_ANON_KEY looks like a Stripe key. Please use your Supabase Anon Key instead.' 
-            : 'Configuration error: The Supabase API key is invalid. Please check your .env.local file.')
+          setDbError('Configuration error: The Supabase API key is invalid. Please check your .env.local file.')
         }
       }
     }

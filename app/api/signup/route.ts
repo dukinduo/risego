@@ -3,11 +3,18 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 
 const createServiceClient = () => {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !key) {
     throw new Error('Supabase service role and URL must be set in environment variables.')
   }
 
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  if (key.startsWith('sb_') || key.startsWith('sk_')) {
+    throw new Error('Your SUPABASE_SERVICE_ROLE_KEY looks like a Stripe key. Please use your Supabase Service Role Key.')
+  }
+
+  return createClient(url, key, {
     auth: { persistSession: false },
   })
 }
