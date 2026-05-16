@@ -135,7 +135,7 @@ export default function SignUpPage() {
               <div className="rounded-2xl bg-amber-50 p-4 text-xs text-amber-800 border border-amber-200">
                 <p className="font-bold">Setup Required</p>
                 <p className="mt-1">{dbError}</p>
-                <p className="mt-2 text-[10px] opacity-70 italic">Tip: If you see "Email rate limit", disable "Confirm email" in Supabase Auth Settings -> Providers -> Email.</p>
+                <p className="mt-2 text-[10px] opacity-70 italic">Tip: If you see "Email rate limit", disable "Confirm email" in Supabase Auth Settings {"->"} Providers {"->"} Email.</p>
               </div>
             )}
             <label className="block text-sm font-medium text-slate-700">
