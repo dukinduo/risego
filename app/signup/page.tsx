@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabase } from '@/lib/supabase-browser'
@@ -22,32 +22,48 @@ export default function SignUpPage() {
     setMessage(null)
 
     const supabase = createBrowserSupabase()
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, username },
-      },
-    })
+
+    const doSignUp = async () => {
+      return await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName, username },
+        },
+      })
+    }
+
+    const { data, error } = await doSignUp()
 
     if (error) {
-      setMessage(error.message)
+      const msg = error.message || 'An error occurred'
+      if (/rate limit/i.test(msg) || /email rate limit/i.test(msg)) {
+        setMessage('Temporary email service issue. Please try again later.')
+        setLoading(false)
+        return
+      }
+
+      setMessage(msg)
       setLoading(false)
       return
     }
 
     const userId = data.user?.id
     if (userId) {
-      const { error: insertError } = await supabase.from<Database['public']['Tables']['users']>('users').insert({
+      const insertPayload = {
         id: userId,
         email,
         username,
         full_name: fullName,
         avatar_url: null,
         status: 'active',
-        is_verified: false,
+        is_verified: true,
         role: 'user',
-      })
+      } as Database['public']['Tables']['users']['Insert']
+
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert(insertPayload)
 
       if (insertError) {
         setMessage(insertError.message)
@@ -56,10 +72,12 @@ export default function SignUpPage() {
       }
     }
 
-    setMessage('Account created. Please check your email or sign in.')
+    setMessage('Account created. You can sign in now.')
     setLoading(false)
     router.push('/signin')
   }
+
+  
 
   return (
     <main className="min-h-screen bg-surface px-4 py-10 sm:px-6">
