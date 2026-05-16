@@ -40,73 +40,43 @@ export default function SignUpPage() {
     const supabase = createBrowserSupabase()
 
     const doSignUp = async () => {
-      return await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: { full_name: fullName, username },
-        },
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, username, fullName }),
       })
+      return await res.json()
     }
 
-    const { data, error } = await doSignUp()
+    const data = await doSignUp()
 
-    if (error) {
-      const msg = error.message || 'An error occurred'
-      if (/rate limit/i.test(msg) || /email rate limit/i.test(msg)) {
-        setMessage('Temporary email service issue (Supabase default rate limit). Please wait a few minutes or use a different email.')
-        setLoading(false)
-        return
-      }
-
+    if (data.error) {
+      const msg = data.error
       if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already exists')) {
-        // If already registered, try to see if we need to sync the public.users table
-        // We'll tell them to try signing in instead, or we could be fancy and try to sync.
-        // For security, we shouldn't automatically sync without a password check, 
-        // but if they just tried to sign up with a password, we can suggest sign in.
         setMessage('This email is already registered. Please try signing in instead.')
-        setLoading(false)
-        return
+      } else {
+        setMessage(msg)
       }
-
-      setMessage(msg)
       setLoading(false)
       return
     }
 
-    const userId = data.user?.id
-    if (userId) {
-      const insertPayload = {
-        id: userId,
-        email,
-        username,
-        full_name: fullName,
-        avatar_url: null,
-        status: 'active',
-        is_verified: true,
-        role: 'user',
-      } as Database['public']['Tables']['users']['Insert']
+    // After successful creation, sign in automatically
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert(insertPayload)
-
-      if (insertError) {
-        if (insertError.message.includes('schema cache') || insertError.message.includes('does not exist')) {
-          setMessage(
-            'The `public.users` table is missing in your Supabase database. Please run the SQL script in `scripts/create_users_table.sql` in the Supabase SQL Editor to fix this.'
-          )
-        } else {
-          setMessage(insertError.message)
-        }
-        setLoading(false)
-        return
-      }
+    if (signInError) {
+      setMessage('Account created, but auto-login failed. Please sign in manually.')
+      setLoading(false)
+      router.push('/signin')
+      return
     }
 
-    setMessage('Account created. You can sign in now.')
+    setMessage('Account created! Redirecting...')
     setLoading(false)
-    router.push('/signin')
+    router.push('/')
   }
 
   
@@ -135,7 +105,6 @@ export default function SignUpPage() {
               <div className="rounded-2xl bg-amber-50 p-4 text-xs text-amber-800 border border-amber-200">
                 <p className="font-bold">Setup Required</p>
                 <p className="mt-1">{dbError}</p>
-                <p className="mt-2 text-[10px] opacity-70 italic">Tip: If you see "Email rate limit", disable "Confirm email" in Supabase Auth Settings {"->"} Providers {"->"} Email.</p>
               </div>
             )}
             <label className="block text-sm font-medium text-slate-700">
