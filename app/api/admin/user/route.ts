@@ -8,9 +8,9 @@ const createServiceClient = () => {
     throw new Error('Supabase service role and URL must be set in environment variables.')
   }
 
-  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
-  })
+  }) as any
 }
 
 export async function POST(request: Request) {
@@ -23,11 +23,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: currentUser, error: currentError } = await supabase
-    .from<Database['public']['Tables']['users']>('users')
+  const { data: currentUserData, error: currentError } = await supabase
+    .from('users')
     .select('role')
     .eq('id', session.user.id)
     .single()
+
+  const currentUser = currentUserData as { role: Database['public']['Tables']['users']['Row']['role'] } | null
 
   if (currentError || currentUser?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
 
   const adminClient = createServiceClient()
   const { data, error } = await adminClient
-    .from<Database['public']['Tables']['users']>('users')
+    .from('users')
     .update(updates)
     .eq('id', userId)
     .select('id,email,username,full_name,avatar_url,status,is_verified,role,created_at')

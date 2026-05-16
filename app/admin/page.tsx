@@ -13,11 +13,13 @@ export default async function AdminPage() {
     redirect('/signin')
   }
 
-  const { data: currentUser, error: currentError } = await supabase
-    .from<Database['public']['Tables']['users']>('users')
+  const { data: currentUserData, error: currentError } = await supabase
+    .from('users')
     .select('role')
     .eq('id', session.user.id)
     .single()
+
+  const currentUser = currentUserData as { role: Database['public']['Tables']['users']['Row']['role'] } | null
 
   if (currentError) {
     return (
@@ -43,7 +45,7 @@ export default async function AdminPage() {
   }
 
   const { data: users, error } = await supabase
-    .from<Database['public']['Tables']['users']>('users')
+    .from('users')
     .select('id,email,username,full_name,avatar_url,status,is_verified,role,created_at')
     .order('created_at', { ascending: false })
 

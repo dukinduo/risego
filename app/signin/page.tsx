@@ -22,11 +22,13 @@ export default function SignInPage() {
 
     let email = identifier
     if (!identifier.includes('@')) {
-      const { data: userData, error: userError } = await supabase
-        .from<Database['public']['Tables']['users']>('users')
+      const { data: userDataRaw, error: userError } = await supabase
+        .from('users')
         .select('email, status')
         .eq('username', identifier)
         .single()
+
+      const userData = userDataRaw as { email: string; status: Database['public']['Tables']['users']['Row']['status'] } | null
 
       if (userError || !userData) {
         setMessage('No account found for that username or email.')
@@ -56,30 +58,48 @@ export default function SignInPage() {
       return
     }
 
-    const { data: profileData, error: profileError } = await supabase
-      .from<Database['public']['Tables']['users']>('users')
+    const { data: profileDataRaw, error: profileError } = await supabase
+      .from('users')
       .select('status')
       .eq('id', data.user.id)
       .single()
 
+    const profileData = profileDataRaw as { status: Database['public']['Tables']['users']['Row']['status'] } | null
+
     if (profileError || !profileData) {
-      setMessage('Unable to validate account status.')
-      setLoading(false)
-      return
-    }
+      // If the user exists in auth.users but not in public.users, attempt to sync it now
+      // This can happen if the signup process was interrupted or the users table was created later
+      const { error: syncError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email!,
+          username: data.user.user_metadata.username || data.user.email!.split('@')[0],
+          full_name: data.user.user_metadata.full_name || 'User',
+          status: 'active',
+          is_verified: true,
+          role: 'user',
+        })
 
-    if (profileData.status === 'banned') {
-      await supabase.auth.signOut()
-      setMessage('Your account is banned. Access denied.')
-      setLoading(false)
-      return
-    }
+      if (syncError) {
+        setMessage('Unable to validate account status. Please contact support.')
+        setLoading(false)
+        return
+      }
+    } else {
+      if (profileData.status === 'banned') {
+        await supabase.auth.signOut()
+        setMessage('Your account is banned. Access denied.')
+        setLoading(false)
+        return
+      }
 
-    if (profileData.status === 'terminated') {
-      await supabase.auth.signOut()
-      setMessage('Your account has been terminated. Access denied.')
-      setLoading(false)
-      return
+      if (profileData.status === 'terminated') {
+        await supabase.auth.signOut()
+        setMessage('Your account has been terminated. Access denied.')
+        setLoading(false)
+        return
+      }
     }
 
     setLoading(false)

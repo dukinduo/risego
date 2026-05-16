@@ -15,6 +15,22 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [dbError, setDbError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function checkDb() {
+      const supabase = createBrowserSupabase()
+      const { error } = await supabase.from('users').select('id').limit(1)
+      if (error) {
+        if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
+          setDbError('Database setup required: The `public.users` table does not exist.')
+        } else if (error.message.includes('JWT') || error.message.includes('Invalid API key')) {
+          setDbError('Configuration error: The Supabase API key is invalid. Please check your .env.local file.')
+        }
+      }
+    }
+    checkDb()
+  }, [])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -38,7 +54,17 @@ export default function SignUpPage() {
     if (error) {
       const msg = error.message || 'An error occurred'
       if (/rate limit/i.test(msg) || /email rate limit/i.test(msg)) {
-        setMessage('Temporary email service issue. Please try again later.')
+        setMessage('Temporary email service issue (Supabase default rate limit). Please wait a few minutes or use a different email.')
+        setLoading(false)
+        return
+      }
+
+      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already exists')) {
+        // If already registered, try to see if we need to sync the public.users table
+        // We'll tell them to try signing in instead, or we could be fancy and try to sync.
+        // For security, we shouldn't automatically sync without a password check, 
+        // but if they just tried to sign up with a password, we can suggest sign in.
+        setMessage('This email is already registered. Please try signing in instead.')
         setLoading(false)
         return
       }
@@ -66,7 +92,13 @@ export default function SignUpPage() {
         .insert(insertPayload)
 
       if (insertError) {
-        setMessage(insertError.message)
+        if (insertError.message.includes('schema cache') || insertError.message.includes('does not exist')) {
+          setMessage(
+            'The `public.users` table is missing in your Supabase database. Please run the SQL script in `scripts/create_users_table.sql` in the Supabase SQL Editor to fix this.'
+          )
+        } else {
+          setMessage(insertError.message)
+        }
         setLoading(false)
         return
       }
@@ -99,6 +131,13 @@ export default function SignUpPage() {
           }
         >
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {dbError && (
+              <div className="rounded-2xl bg-amber-50 p-4 text-xs text-amber-800 border border-amber-200">
+                <p className="font-bold">Setup Required</p>
+                <p className="mt-1">{dbError}</p>
+                <p className="mt-2 text-[10px] opacity-70 italic">Tip: If you see "Email rate limit", disable "Confirm email" in Supabase Auth Settings -> Providers -> Email.</p>
+              </div>
+            )}
             <label className="block text-sm font-medium text-slate-700">
               Email
               <input
