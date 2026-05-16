@@ -1,0 +1,139 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createBrowserSupabase } from '@/lib/supabase-browser'
+import { AuthCard } from '@/components/AuthCard'
+import { Database } from '@/types/supabase'
+
+export default function SignUpPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setLoading(true)
+    setMessage(null)
+
+    const supabase = createBrowserSupabase()
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName, username },
+      },
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setLoading(false)
+      return
+    }
+
+    const userId = data.user?.id
+    if (userId) {
+      const { error: insertError } = await supabase.from<Database['public']['Tables']['users']>('users').insert({
+        id: userId,
+        email,
+        username,
+        full_name: fullName,
+        avatar_url: null,
+        status: 'active',
+        is_verified: false,
+        role: 'user',
+      })
+
+      if (insertError) {
+        setMessage(insertError.message)
+        setLoading(false)
+        return
+      }
+    }
+
+    setMessage('Account created. Please check your email or sign in.')
+    setLoading(false)
+    router.push('/signin')
+  }
+
+  return (
+    <main className="min-h-screen bg-surface px-4 py-10 sm:px-6">
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6">
+        <div className="text-center">
+          <p className="text-3xl font-semibold text-slate-900">RiseGO</p>
+          <p className="mt-2 text-sm text-slate-500">Create a clean, mobile-first account.</p>
+        </div>
+        <AuthCard
+          title="Sign up"
+          description="Use your email, username, and password to join RiseGO."
+          footer={
+            <p>
+              Already on RiseGO?{' '}
+              <Link className="font-semibold text-instagram hover:text-blue-600" href="/signin">
+                Sign in
+              </Link>
+            </p>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <label className="block text-sm font-medium text-slate-700">
+              Email
+              <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="email@example.com"
+                required
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-instagram focus:ring-4 focus:ring-instagram/10"
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Username
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="yourusername"
+                required
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-instagram focus:ring-4 focus:ring-instagram/10"
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Full name
+              <input
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                placeholder="Full name"
+                required
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-instagram focus:ring-4 focus:ring-instagram/10"
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                required
+                minLength={6}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-instagram focus:ring-4 focus:ring-instagram/10"
+              />
+            </label>
+            {message ? <p className="text-sm text-red-600">{message}</p> : null}
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-3 w-full rounded-2xl bg-instagram px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? 'Creating account...' : 'Sign up'}
+            </button>
+          </form>
+        </AuthCard>
+      </div>
+    </main>
+  )
+}
