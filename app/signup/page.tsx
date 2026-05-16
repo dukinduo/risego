@@ -23,7 +23,7 @@ export default function SignUpPage() {
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       
       if (anonKey?.startsWith('sb_') || anonKey?.startsWith('pk_')) {
-        setDbError('CRITICAL CONFIG ERROR: Your NEXT_PUBLIC_SUPABASE_ANON_KEY is a Stripe key. You must replace it with your Supabase Anon Key in .env.local and Vercel Settings.')
+        setDbError(`CRITICAL CONFIG ERROR: Your key starts with "${anonKey.substring(0, 15)}...". This is a Stripe key, not a Supabase key. Update it in your .env.local and Vercel dashboard.`)
         return
       }
 

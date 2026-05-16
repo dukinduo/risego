@@ -18,6 +18,14 @@ export default function SignInPage() {
     event.preventDefault()
     setLoading(true)
     setMessage(null)
+
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (anonKey?.startsWith('sb_') || anonKey?.startsWith('pk_')) {
+      setMessage(`CRITICAL ERROR: Using Stripe key "${anonKey.substring(0, 15)}...". Replace it with Supabase Anon Key in .env.local/Vercel.`)
+      setLoading(false)
+      return
+    }
+
     const supabase = createBrowserSupabase()
 
     let email = identifier
