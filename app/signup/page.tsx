@@ -25,7 +25,10 @@ export default function SignUpPage() {
         if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
           setDbError('Database setup required: The `public.users` table does not exist.')
         } else if (error.message.includes('JWT') || error.message.includes('Invalid API key')) {
-          setDbError('Configuration error: The Supabase API key is invalid. Please check your .env.local file.')
+          const isStripeKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.startsWith('sb_') || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.startsWith('pk_')
+          setDbError(isStripeKey 
+            ? 'Configuration error: Your NEXT_PUBLIC_SUPABASE_ANON_KEY looks like a Stripe key. Please use your Supabase Anon Key instead.' 
+            : 'Configuration error: The Supabase API key is invalid. Please check your .env.local file.')
         }
       }
     }

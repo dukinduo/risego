@@ -53,7 +53,11 @@ export default function SignInPage() {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.session) {
-      setMessage(error?.message ?? 'Unable to sign in. Please check your credentials.')
+      if (error?.message.includes('Invalid API key')) {
+        setMessage('Configuration error: The Supabase API key is invalid. (It looks like a Stripe key is being used in .env.local)')
+      } else {
+        setMessage(error?.message ?? 'Unable to sign in. Please check your credentials.')
+      }
       setLoading(false)
       return
     }
