@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabase } from '@/lib/supabase-browser'
@@ -13,6 +13,34 @@ export default function SignInPage() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [dbError, setDbError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function checkDb() {
+      const supabase = createBrowserSupabase()
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      if (!anonKey) {
+        setDbError('Configuration error: NEXT_PUBLIC_SUPABASE_ANON_KEY is missing. Please check your .env.local file.')
+        return
+      }
+
+      if (anonKey.startsWith('sb_') || anonKey.startsWith('pk_')) {
+        setDbError(`CRITICAL CONFIG ERROR: Your key starts with "${anonKey.substring(0, 15)}...". This is a Stripe key, not a Supabase key. Update it in your .env.local and Vercel dashboard.`)
+        return
+      }
+
+      const { error } = await supabase.from('users').select('id').limit(1)
+      if (error) {
+        if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
+          setDbError('Database setup required: The `public.users` table does not exist.')
+        } else if (error.message.includes('JWT') || error.message.includes('Invalid API key') || error.message.includes('apiKey header')) {
+          setDbError('Configuration error: The Supabase API key is invalid or missing. Please check your .env.local file.')
+        }
+      }
+    }
+    checkDb()
+  }, [])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -138,6 +166,12 @@ export default function SignInPage() {
           }
         >
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {dbError && (
+              <div className="rounded-2xl bg-amber-50 p-4 text-xs text-amber-800 border border-amber-200">
+                <p className="font-bold">Setup Required</p>
+                <p className="mt-1">{dbError}</p>
+              </div>
+            )}
             <label className="block text-sm font-medium text-slate-700">
               Username or email
               <input

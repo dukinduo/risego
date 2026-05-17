@@ -7,7 +7,7 @@ const createServiceClient = () => {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !key) {
-    throw new Error('Supabase service role and URL must be set in environment variables.')
+    throw new Error('Supabase configuration is missing. NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in your .env.local file.')
   }
 
   if (key.startsWith('sb_') || key.startsWith('sk_')) {

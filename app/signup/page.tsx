@@ -22,7 +22,12 @@ export default function SignUpPage() {
       const supabase = createBrowserSupabase()
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       
-      if (anonKey?.startsWith('sb_') || anonKey?.startsWith('pk_')) {
+      if (!anonKey) {
+        setDbError('Configuration error: NEXT_PUBLIC_SUPABASE_ANON_KEY is missing. Please check your .env.local file.')
+        return
+      }
+
+      if (anonKey.startsWith('sb_') || anonKey.startsWith('pk_')) {
         setDbError(`CRITICAL CONFIG ERROR: Your key starts with "${anonKey.substring(0, 15)}...". This is a Stripe key, not a Supabase key. Update it in your .env.local and Vercel dashboard.`)
         return
       }
@@ -31,8 +36,8 @@ export default function SignUpPage() {
       if (error) {
         if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
           setDbError('Database setup required: The `public.users` table does not exist.')
-        } else if (error.message.includes('JWT') || error.message.includes('Invalid API key')) {
-          setDbError('Configuration error: The Supabase API key is invalid. Please check your .env.local file.')
+        } else if (error.message.includes('JWT') || error.message.includes('Invalid API key') || error.message.includes('apiKey header')) {
+          setDbError('Configuration error: The Supabase API key is invalid or missing. Please check your .env.local file.')
         }
       }
     }
@@ -61,6 +66,8 @@ export default function SignUpPage() {
       const msg = data.error
       if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already exists')) {
         setMessage('This email is already registered. Please try signing in instead.')
+      } else if (msg.includes('Invalid API key')) {
+        setMessage('Configuration error: The Supabase API key is invalid. Please check your .env.local file.')
       } else {
         setMessage(msg)
       }
