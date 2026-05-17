@@ -111,26 +111,46 @@ export default function SignInPage() {
     if (profileError || !profileData) {
       // If the user exists in auth.users but not in public.users, attempt to sync it now
       // This can happen if the signup process was interrupted or the users table was created later
+      let username = data.user.user_metadata.username || data.user.email!.split('@')[0]
+      
       const { error: syncError } = await supabase
         .from('users')
         .insert({
           id: data.user.id,
           email: data.user.email!,
-          username: data.user.user_metadata.username || data.user.email!.split('@')[0],
+          username: username,
           full_name: data.user.user_metadata.full_name || 'User',
           status: 'active',
-          is_verified: true,
+          is_verified: false,
           role: 'user',
         })
 
       if (syncError) {
-        if (syncError.message.includes('duplicate key')) {
-          setMessage('Username already taken. Please use a different username or delete the old profile in Supabase SQL Editor.')
+        if (syncError.message.includes('duplicate key') && syncError.message.includes('username')) {
+          // If username is taken, try with a random suffix
+          const randomUsername = `${username}_${Math.floor(Math.random() * 1000)}`
+          const { error: retryError } = await supabase
+            .from('users')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+              username: randomUsername,
+              full_name: data.user.user_metadata.full_name || 'User',
+              status: 'active',
+              is_verified: false,
+              role: 'user',
+            })
+          
+          if (retryError) {
+            setMessage(`Unable to sync account: ${retryError.message}`)
+            setLoading(false)
+            return
+          }
         } else {
           setMessage(`Unable to validate account status: ${syncError.message}`)
+          setLoading(false)
+          return
         }
-        setLoading(false)
-        return
       }
     } else {
       if (profileData.status === 'banned') {

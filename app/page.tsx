@@ -14,7 +14,8 @@ import {
   Grid,
   Bookmark,
   Tag,
-  ArrowRight
+  ArrowRight,
+  Menu
 } from 'lucide-react'
 import { createBrowserSupabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
@@ -24,6 +25,8 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('feed')
+  const [adminCode, setAdminCode] = useState('')
+  const [adminMessage, setAdminCodeMessage] = useState<string | null>(null)
   const supabase = createBrowserSupabase()
   const router = useRouter()
 
@@ -31,11 +34,15 @@ export default function HomePage() {
     async function getUser() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('users')
           .select('*')
           .eq('id', session.user.id)
           .single()
+        
+        if (error) {
+           console.error('Error fetching profile:', error)
+        }
         setUser({ ...session.user, profile })
       }
       setLoading(false)
@@ -46,6 +53,25 @@ export default function HomePage() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/signin'
+  }
+
+  const handleAdminCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (adminCode === '123456') { // This is your secret code
+      const { error } = await supabase
+        .from('users')
+        .update({ role: 'admin' })
+        .eq('id', user.id)
+      
+      if (error) {
+        setAdminCodeMessage(`Error: ${error.message}`)
+      } else {
+        setAdminCodeMessage('Success! You are now an admin. Refreshing...')
+        setTimeout(() => window.location.reload(), 1500)
+      }
+    } else {
+      setAdminCodeMessage('Invalid code. Please try again.')
+    }
   }
 
   if (loading) {
@@ -89,20 +115,18 @@ export default function HomePage() {
         <div className="flex w-full items-center justify-around sm:flex-col sm:items-stretch sm:gap-2">
           <NavButton icon={<Home />} label="Home" active={activeTab === 'feed'} onClick={() => setActiveTab('feed')} />
           <NavButton icon={<Search />} label="Search" active={activeTab === 'search'} onClick={() => setActiveTab('search')} />
-          <NavButton icon={<PlusSquare />} label="Create" />
-          <NavButton icon={<Heart />} label="Notifications" />
+          <NavButton icon={<PlusSquare />} label="Create" onClick={() => alert('Feature coming soon!')} />
+          <NavButton icon={<Heart />} label="Notifications" active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
           <NavButton icon={<User />} label="Profile" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
           <NavButton icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
           
-          <div className="mt-auto hidden sm:block">
-            {user.profile?.role === 'admin' && (
-              <NavButton 
-                icon={<ShieldCheck className="text-amber-500" />} 
-                label="Admin" 
-                onClick={() => router.push('/admin')} 
-              />
-            )}
-            <NavButton icon={<LogOut />} label="Sign Out" onClick={handleSignOut} />
+          <div className="mt-auto hidden sm:block space-y-2">
+            <NavButton 
+              icon={<Menu />} 
+              label="More" 
+              active={activeTab === 'settings'} 
+              onClick={() => setActiveTab('settings')} 
+            />
           </div>
         </div>
       </nav>
@@ -132,12 +156,25 @@ export default function HomePage() {
                 className="w-full bg-slate-100 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-instagram/20 transition"
               />
             </div>
-            <div className="grid grid-cols-3 gap-1 sm:gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                <div key={i} className="aspect-square bg-slate-50 rounded-lg flex items-center justify-center text-slate-200">
-                  <Grid size={32} strokeWidth={1} />
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+              <div className="h-16 w-16 rounded-full border-2 border-slate-900 flex items-center justify-center">
+                <Search size={32} />
+              </div>
+              <h3 className="text-xl font-bold">Search for content</h3>
+              <p className="text-slate-500">Explore and find interesting people and posts.</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'notifications' && (
+          <div className="max-w-xl mx-auto space-y-6 animate-in fade-in duration-500">
+            <h2 className="text-2xl font-bold mb-8">Notifications</h2>
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+              <div className="h-16 w-16 rounded-full border-2 border-slate-900 flex items-center justify-center">
+                <Heart size={32} />
+              </div>
+              <h3 className="text-xl font-bold">Activity On Your Posts</h3>
+              <p className="text-slate-500">When someone likes or comments on one of your posts, you'll see it here.</p>
             </div>
           </div>
         )}
@@ -207,7 +244,7 @@ export default function HomePage() {
                 <SettingsItem label="Terms of Service" />
               </SettingsGroup>
 
-              {user.profile?.role === 'admin' && (
+              {user.profile?.role === 'admin' ? (
                 <SettingsGroup title="Admin Controls">
                   <button 
                     onClick={() => router.push('/admin')}
@@ -216,6 +253,29 @@ export default function HomePage() {
                     <span className="text-sm font-semibold text-amber-900">Admin Dashboard</span>
                     <ShieldCheck className="h-5 w-5 text-amber-600" />
                   </button>
+                </SettingsGroup>
+              ) : (
+                <SettingsGroup title="Admin Access">
+                  <form onSubmit={handleAdminCodeSubmit} className="p-4 space-y-3">
+                    <p className="text-xs text-slate-500 mb-2">Enter secret code to get admin privileges.</p>
+                    <div className="flex gap-2">
+                      <input 
+                        type="password" 
+                        value={adminCode}
+                        onChange={(e) => setAdminCode(e.target.value)}
+                        placeholder="Admin Code" 
+                        className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:border-instagram"
+                      />
+                      <button type="submit" className="bg-slate-900 text-white rounded-xl px-4 py-2 text-sm font-bold hover:bg-slate-800 transition">
+                        Verify
+                      </button>
+                    </div>
+                    {adminMessage && (
+                      <p className={`text-[10px] font-bold ${adminMessage.includes('Success') ? 'text-green-600' : 'text-red-600'}`}>
+                        {adminMessage}
+                      </p>
+                    )}
+                  </form>
                 </SettingsGroup>
               )}
 

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         username,
         full_name: fullName,
         status: 'active',
-        is_verified: true,
+        is_verified: false,
         role: 'user',
       })
 
