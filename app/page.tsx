@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { 
   Home, 
@@ -110,39 +110,35 @@ export default function HomePage() {
       {/* Main Content Area */}
       <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-8">
         {activeTab === 'feed' && (
-          <div className="space-y-8">
-            <h2 className="text-2xl font-bold sm:hidden">RiseGO</h2>
-            {/* Feed Items (Placeholders) */}
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-                <div className="flex items-center gap-3 p-4">
-                  <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                    <User size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold flex items-center">
-                      User_{i} {i === 1 && <VerifiedBadge />}
-                    </p>
-                    <p className="text-xs text-slate-500">Suggested for you</p>
-                  </div>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 animate-in fade-in duration-700">
+            <div className="h-20 w-20 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 mb-2">
+              <PlusSquare size={32} className="text-slate-300" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">No Posts Yet</h2>
+            <p className="text-slate-500 max-w-xs">When people you follow share photos, they will appear here in your feed.</p>
+            <button className="text-instagram font-bold text-sm hover:text-blue-600 transition">
+              Find people to follow
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'search' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="relative mb-8">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
+              <input 
+                type="text" 
+                placeholder="Search" 
+                className="w-full bg-slate-100 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-instagram/20 transition"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-1 sm:gap-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                <div key={i} className="aspect-square bg-slate-50 rounded-lg flex items-center justify-center text-slate-200">
+                  <Grid size={32} strokeWidth={1} />
                 </div>
-                <div className="aspect-square bg-slate-50 flex items-center justify-center text-slate-300">
-                   <PlusSquare size={48} strokeWidth={1} />
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="flex gap-4">
-                    <Heart className="hover:text-red-500 cursor-pointer" />
-                    <Search className="rotate-90 hover:text-instagram cursor-pointer" />
-                    <PlusSquare className="hover:text-instagram cursor-pointer" />
-                  </div>
-                  <p className="text-sm font-bold">1,234 likes</p>
-                  <p className="text-sm">
-                    <span className="font-bold mr-2">User_{i}</span>
-                    This is a beautiful mobile-first social experience! #RiseGO #Social
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
@@ -160,21 +156,21 @@ export default function HomePage() {
                   </h2>
                   <div className="flex gap-2 justify-center sm:justify-start">
                     <button className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold">Edit Profile</button>
-                    <button className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg">
+                    <button className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg" onClick={() => setActiveTab('settings')}>
                       <Settings size={20} />
                     </button>
                   </div>
                 </div>
                 
                 <div className="flex justify-around sm:justify-start sm:gap-10 text-sm">
-                  <p><strong>42</strong> posts</p>
-                  <p><strong>12.5k</strong> followers</p>
-                  <p><strong>890</strong> following</p>
+                  <p><strong>0</strong> posts</p>
+                  <p><strong>0</strong> followers</p>
+                  <p><strong>0</strong> following</p>
                 </div>
                 
                 <div className="text-sm">
                   <p className="font-bold">{user.profile?.full_name}</p>
-                  <p className="text-slate-600">Mobile-first developer. Building the future of social. ✨</p>
+                  <p className="text-slate-600">Building the future of social. ✨</p>
                 </div>
               </div>
             </div>
@@ -187,12 +183,9 @@ export default function HomePage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-1 sm:gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="aspect-square bg-slate-50 rounded-lg flex items-center justify-center text-slate-200 hover:bg-slate-100 transition cursor-pointer">
-                  <PlusSquare size={32} strokeWidth={1} />
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-12 text-center space-y-2 text-slate-400">
+               <PlusSquare size={48} strokeWidth={1} />
+               <p className="text-xl font-bold text-slate-900">No Posts Yet</p>
             </div>
           </div>
         )}
@@ -245,13 +238,15 @@ function NavButton({ icon, label, active = false, onClick }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center gap-4 rounded-2xl p-3 transition sm:px-4 ${
+      className={`flex items-center gap-4 rounded-2xl p-3 transition sm:px-4 w-full ${
         active 
           ? 'bg-slate-50 text-slate-900' 
           : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
       }`}
     >
-      <span className={active ? 'scale-110 transition' : ''}>{icon}</span>
+      <span className={`flex-shrink-0 ${active ? 'scale-110 transition' : ''}`}>
+        {React.cloneElement(icon as React.ReactElement, { size: 24 })}
+      </span>
       <span className={`hidden md:block text-sm ${active ? 'font-bold' : 'font-medium'}`}>{label}</span>
     </button>
   )
