@@ -124,7 +124,11 @@ export default function SignInPage() {
         })
 
       if (syncError) {
-        setMessage(`Unable to validate account status: ${syncError.message}`)
+        if (syncError.message.includes('duplicate key')) {
+          setMessage('Username already taken. Please use a different username or delete the old profile in Supabase SQL Editor.')
+        } else {
+          setMessage(`Unable to validate account status: ${syncError.message}`)
+        }
         setLoading(false)
         return
       }

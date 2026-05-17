@@ -55,6 +55,12 @@ export async function POST(request: Request) {
     case 'terminate':
       updates.status = 'terminated'
       break
+    case 'make_admin':
+      updates.role = 'admin'
+      break
+    case 'remove_admin':
+      updates.role = 'user'
+      break
     default:
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   }
