@@ -91,6 +91,8 @@ export default function SignInPage() {
     if (error || !data.session) {
       if (error?.message.includes('Invalid API key')) {
         setMessage('Configuration error: The Supabase API key is invalid. (It looks like a Stripe key is being used in .env.local)')
+      } else if (error?.message.includes('Email not confirmed')) {
+        setMessage('Email not confirmed. Please check your inbox or disable "Confirm email" in Supabase Auth settings.')
       } else {
         setMessage(error?.message ?? 'Unable to sign in. Please check your credentials.')
       }
