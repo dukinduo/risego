@@ -174,7 +174,7 @@ export default function HomePage() {
                 <Heart size={32} />
               </div>
               <h3 className="text-xl font-bold">Activity On Your Posts</h3>
-              <p className="text-slate-500">When someone likes or comments on one of your posts, you'll see it here.</p>
+              <p className="text-slate-500">When someone likes or comments on one of your posts, you&apos;ll see it here.</p>
             </div>
           </div>
         )}
