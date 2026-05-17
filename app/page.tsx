@@ -33,34 +33,36 @@ export default function HomePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [caption, setCaption] = useState('')
   const [isPosting, setIsPosting] = useState(false)
-  const [posts, setPosts] = useState<any[]>([
-    {
-      id: 'demo1',
-      user_id: 'system',
-      username: 'dukin',
-      full_name: 'Dukin Official',
-      is_verified: true,
-      caption: 'Welcome to RiseGO! 🚀 The future of social media is here.',
-      image_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop',
-      created_at: new Date().toISOString(),
-      likes: 1240,
-      comments: 85
-    },
-    {
-      id: 'demo2',
-      user_id: 'system',
-      username: 'risego_app',
-      full_name: 'RiseGO Team',
-      is_verified: true,
-      caption: 'Loving the new mobile-first UI? Let us know! ✨',
-      image_url: null,
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-      likes: 850,
-      comments: 42
-    }
-  ])
+  const [posts, setPosts] = useState<any[]>([])
   const supabase = createBrowserSupabase()
   const router = useRouter()
+
+  useEffect(() => {
+    async function fetchData() {
+      // Get User
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        setUser({ ...session.user, profile })
+      }
+
+      // Get Posts
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (postsData) {
+        setPosts(postsData)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -77,49 +79,29 @@ export default function HomePage() {
     if (!caption && !selectedImage) return
     setIsPosting(true)
     
-    const newPost = {
-      id: Math.random().toString(36).substr(2, 9),
-      user_id: user.id,
-      username: user.profile?.username,
-      full_name: user.profile?.full_name,
-      is_verified: user.profile?.is_verified,
-      caption: caption,
-      image_url: selectedImage,
-      created_at: new Date().toISOString(),
-      likes: 0,
-      comments: 0
-    }
+    const { data, error } = await supabase
+      .from('posts')
+      .insert({
+        user_id: user.id,
+        username: user.profile?.username,
+        full_name: user.profile?.full_name,
+        is_verified: user.profile?.is_verified,
+        caption: caption,
+        image_url: selectedImage, // In a real app, you'd upload this to Supabase Storage first
+      })
+      .select()
+      .single()
 
-    // Adding to local state so it shows up immediately
-    setPosts([newPost, ...posts])
-
-    setTimeout(() => {
-      setIsPosting(false)
+    if (error) {
+      alert(`Error posting: ${error.message}`)
+    } else {
+      setPosts([data, ...posts])
       setCaption('')
       setSelectedImage(null)
       setActiveTab('feed')
-    }, 800)
-  }
-
-  useEffect(() => {
-    async function getUser() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        const { data: profile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        
-        if (error) {
-           console.error('Error fetching profile:', error)
-        }
-        setUser({ ...session.user, profile })
-      }
-      setLoading(false)
     }
-    getUser()
-  }, [])
+    setIsPosting(false)
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
