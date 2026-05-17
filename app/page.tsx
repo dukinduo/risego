@@ -15,7 +15,10 @@ import {
   Bookmark,
   Tag,
   ArrowRight,
-  Menu
+  Menu,
+  MessageCircle,
+  Share2,
+  MoreHorizontal
 } from 'lucide-react'
 import { createBrowserSupabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
@@ -30,6 +33,32 @@ export default function HomePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [caption, setCaption] = useState('')
   const [isPosting, setIsPosting] = useState(false)
+  const [posts, setPosts] = useState<any[]>([
+    {
+      id: 'demo1',
+      user_id: 'system',
+      username: 'dukin',
+      full_name: 'Dukin Official',
+      is_verified: true,
+      caption: 'Welcome to RiseGO! 🚀 The future of social media is here.',
+      image_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop',
+      created_at: new Date().toISOString(),
+      likes: 1240,
+      comments: 85
+    },
+    {
+      id: 'demo2',
+      user_id: 'system',
+      username: 'risego_app',
+      full_name: 'RiseGO Team',
+      is_verified: true,
+      caption: 'Loving the new mobile-first UI? Let us know! ✨',
+      image_url: null,
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      likes: 850,
+      comments: 42
+    }
+  ])
   const supabase = createBrowserSupabase()
   const router = useRouter()
 
@@ -47,14 +76,29 @@ export default function HomePage() {
   const handlePost = async () => {
     if (!caption && !selectedImage) return
     setIsPosting(true)
-    // Mocking the post success
+    
+    const newPost = {
+      id: Math.random().toString(36).substr(2, 9),
+      user_id: user.id,
+      username: user.profile?.username,
+      full_name: user.profile?.full_name,
+      is_verified: user.profile?.is_verified,
+      caption: caption,
+      image_url: selectedImage,
+      created_at: new Date().toISOString(),
+      likes: 0,
+      comments: 0
+    }
+
+    // Adding to local state so it shows up immediately
+    setPosts([newPost, ...posts])
+
     setTimeout(() => {
       setIsPosting(false)
       setCaption('')
       setSelectedImage(null)
       setActiveTab('feed')
-      alert('Post shared successfully!')
-    }, 1500)
+    }, 800)
   }
 
   useEffect(() => {
@@ -161,18 +205,26 @@ export default function HomePage() {
       {/* Main Content Area */}
       <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-8">
         {activeTab === 'feed' && (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 animate-in fade-in duration-700">
-            <div className="h-20 w-20 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 mb-2">
-              <PlusSquare size={32} className="text-slate-300" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">No Posts Yet</h2>
-            <p className="text-slate-500 max-w-xs">When people you follow share photos, they will appear here in your feed.</p>
-            <button 
-              onClick={() => setActiveTab('create')}
-              className="text-instagram font-bold text-sm hover:text-blue-600 transition"
-            >
-              Share your first photo
-            </button>
+          <div className="max-w-xl mx-auto space-y-8 animate-in fade-in duration-700">
+            {posts.length > 0 ? (
+              posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+                <div className="h-20 w-20 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 mb-2">
+                  <PlusSquare size={32} className="text-slate-300" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">No Posts Yet</h2>
+                <p className="text-slate-500 max-w-xs">When people you follow share photos, they will appear here in your feed.</p>
+                <button 
+                  onClick={() => setActiveTab('create')}
+                  className="text-instagram font-bold text-sm hover:text-blue-600 transition"
+                >
+                  Share your first photo
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -317,15 +369,36 @@ export default function HomePage() {
             
             <div className="flex justify-center border-t border-slate-100 -mt-8">
               <div className="flex gap-12 text-xs font-bold tracking-widest uppercase py-4">
-                <span className="flex items-center gap-2 border-t-2 border-slate-900 pt-4 -mt-4"><Grid size={16} /> Posts</span>
-                <span className="flex items-center gap-2 text-slate-400 pt-4 -mt-4"><Bookmark size={16} /> Saved</span>
-                <span className="flex items-center gap-2 text-slate-400 pt-4 -mt-4"><Tag size={16} /> Tagged</span>
+                <span className="flex items-center gap-2 border-t-2 border-slate-900 pt-4 -mt-4 cursor-pointer"><Grid size={16} /> Posts</span>
+                <span className="flex items-center gap-2 text-slate-400 pt-4 -mt-4 cursor-pointer"><Bookmark size={16} /> Saved</span>
+                <span className="flex items-center gap-2 text-slate-400 pt-4 -mt-4 cursor-pointer"><Tag size={16} /> Tagged</span>
               </div>
             </div>
             
-            <div className="flex flex-col items-center justify-center py-12 text-center space-y-2 text-slate-400">
-               <PlusSquare size={48} strokeWidth={1} />
-               <p className="text-xl font-bold text-slate-900">No Posts Yet</p>
+            <div className="grid grid-cols-3 gap-1 sm:gap-4 pb-12">
+              {posts.filter(p => p.user_id === user.id).length > 0 ? (
+                posts.filter(p => p.user_id === user.id).map((post) => (
+                  <div key={post.id} className="aspect-square bg-slate-100 rounded-lg overflow-hidden group relative cursor-pointer">
+                    {post.image_url ? (
+                      <img src={post.image_url} alt="Post" className="h-full w-full object-cover transition group-hover:scale-105" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center p-4 bg-slate-50 text-slate-400 italic text-[10px] text-center">
+                        {post.caption.slice(0, 50)}...
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-4 text-white font-bold text-sm">
+                      <span className="flex items-center gap-1"><Heart size={16} fill="white" /> {post.likes}</span>
+                      <span className="flex items-center gap-1"><MessageCircle size={16} fill="white" /> {post.comments}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-3 flex flex-col items-center justify-center py-12 text-center space-y-2 text-slate-400">
+                  <PlusSquare size={48} strokeWidth={1} />
+                  <p className="text-xl font-bold text-slate-900">No Posts Yet</p>
+                  <button onClick={() => setActiveTab('create')} className="text-instagram font-bold text-sm">Share your first photo</button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -431,6 +504,85 @@ function SettingsItem({ label }: any) {
     <div className="p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer text-sm font-medium flex justify-between items-center">
       {label}
       <ArrowRight size={16} className="text-slate-300" />
+    </div>
+  )
+}
+
+function PostCard({ post }: { post: any }) {
+  return (
+    <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-soft animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Post Header */}
+      <div className="p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50">
+            {post.username[0].toUpperCase()}
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <span className="text-sm font-bold text-slate-900">@{post.username}</span>
+              {post.is_verified && <VerifiedBadge className="h-4 w-4" />}
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium">Original audio • 1h</p>
+          </div>
+        </div>
+        <button className="p-2 hover:bg-slate-50 rounded-full transition text-slate-400">
+          <MoreHorizontal size={20} />
+        </button>
+      </div>
+
+      {/* Post Image */}
+      {post.image_url && (
+        <div className="aspect-square w-full bg-slate-50 relative overflow-hidden">
+          <img src={post.image_url} alt="Post" className="h-full w-full object-cover" />
+        </div>
+      )}
+
+      {/* Post Actions */}
+      <div className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 text-slate-800">
+            <button className="hover:text-red-500 transition scale-110 active:scale-125">
+              <Heart size={24} />
+            </button>
+            <button className="hover:text-slate-500 transition">
+              <MessageCircle size={24} />
+            </button>
+            <button className="hover:text-instagram transition">
+              <Share2 size={24} />
+            </button>
+          </div>
+          <button className="hover:text-slate-900 transition">
+            <Bookmark size={24} />
+          </button>
+        </div>
+
+        <div className="space-y-1.5">
+          <p className="text-sm font-bold text-slate-900">{post.likes.toLocaleString()} likes</p>
+          <div className="text-sm">
+            <span className="font-bold text-slate-900 mr-2">@{post.username}</span>
+            <span className="text-slate-700 leading-relaxed">{post.caption}</span>
+          </div>
+          <button className="text-sm text-slate-400 font-medium block">
+            View all {post.comments} comments
+          </button>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold pt-1">
+            {new Date(post.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+      </div>
+
+      {/* Comment Input */}
+      <div className="px-4 py-3 border-t border-slate-50 flex items-center gap-3">
+        <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400">
+          U
+        </div>
+        <input 
+          type="text" 
+          placeholder="Add a comment..." 
+          className="flex-1 text-sm outline-none placeholder:text-slate-300"
+        />
+        <button className="text-instagram font-bold text-xs disabled:opacity-50">Post</button>
+      </div>
     </div>
   )
 }
