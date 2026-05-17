@@ -115,7 +115,7 @@ export default function HomePage() {
         <div className="flex w-full items-center justify-around sm:flex-col sm:items-stretch sm:gap-2">
           <NavButton icon={<Home />} label="Home" active={activeTab === 'feed'} onClick={() => setActiveTab('feed')} />
           <NavButton icon={<Search />} label="Search" active={activeTab === 'search'} onClick={() => setActiveTab('search')} />
-          <NavButton icon={<PlusSquare />} label="Create" onClick={() => alert('Feature coming soon!')} />
+          <NavButton icon={<PlusSquare />} label="Create" active={activeTab === 'create'} onClick={() => setActiveTab('create')} />
           <NavButton icon={<Heart />} label="Notifications" active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
           <NavButton icon={<User />} label="Profile" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
           <NavButton icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -140,9 +140,54 @@ export default function HomePage() {
             </div>
             <h2 className="text-2xl font-bold text-slate-900">No Posts Yet</h2>
             <p className="text-slate-500 max-w-xs">When people you follow share photos, they will appear here in your feed.</p>
-            <button className="text-instagram font-bold text-sm hover:text-blue-600 transition">
-              Find people to follow
+            <button 
+              onClick={() => setActiveTab('create')}
+              className="text-instagram font-bold text-sm hover:text-blue-600 transition"
+            >
+              Share your first photo
             </button>
+          </div>
+        )}
+
+        {activeTab === 'create' && (
+          <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <h2 className="text-xl font-bold">Create New Post</h2>
+              <button className="text-instagram font-bold text-sm">Next</button>
+            </div>
+            
+            <div className="aspect-square w-full bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center space-y-4 transition hover:bg-slate-100 cursor-pointer group">
+              <div className="h-16 w-16 rounded-full bg-white shadow-soft flex items-center justify-center group-hover:scale-110 transition">
+                <PlusSquare size={32} className="text-instagram" />
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-slate-900">Select photos and videos</p>
+                <p className="text-xs text-slate-500 mt-1">Drag and drop files here</p>
+              </div>
+              <button className="bg-instagram text-white px-4 py-2 rounded-xl text-xs font-bold shadow-instagram/20 shadow-lg">
+                Select from computer
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">Caption</span>
+                <textarea 
+                  placeholder="Write a caption..." 
+                  className="mt-2 w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm outline-none focus:border-instagram h-32 resize-none"
+                />
+              </label>
+              
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-sm font-medium">Add Location</span>
+                <PlusSquare size={20} className="text-slate-400" />
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-sm font-medium">Advanced Settings</span>
+                <ArrowRight size={20} className="text-slate-400" />
+              </div>
+            </div>
           </div>
         )}
 
