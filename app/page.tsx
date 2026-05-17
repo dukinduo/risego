@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Grid,
   Bookmark,
-  Tag
+  Tag,
+  ArrowRight
 } from 'lucide-react'
 import { createBrowserSupabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
