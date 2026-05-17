@@ -122,7 +122,7 @@ export default function SignInPage() {
         })
 
       if (syncError) {
-        setMessage('Unable to validate account status. Please contact support.')
+        setMessage(`Unable to validate account status: ${syncError.message}`)
         setLoading(false)
         return
       }
