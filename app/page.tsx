@@ -27,8 +27,35 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState('feed')
   const [adminCode, setAdminCode] = useState('')
   const [adminMessage, setAdminCodeMessage] = useState<string | null>(null)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [caption, setCaption] = useState('')
+  const [isPosting, setIsPosting] = useState(false)
   const supabase = createBrowserSupabase()
   const router = useRouter()
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handlePost = async () => {
+    if (!caption && !selectedImage) return
+    setIsPosting(true)
+    // Mocking the post success
+    setTimeout(() => {
+      setIsPosting(false)
+      setCaption('')
+      setSelectedImage(null)
+      setActiveTab('feed')
+      alert('Post shared successfully!')
+    }, 1500)
+  }
 
   useEffect(() => {
     async function getUser() {
@@ -153,37 +180,68 @@ export default function HomePage() {
           <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h2 className="text-xl font-bold">Create New Post</h2>
-              <button className="text-instagram font-bold text-sm">Next</button>
+              <button 
+                onClick={handlePost}
+                disabled={isPosting || (!caption && !selectedImage)}
+                className="text-instagram font-bold text-sm disabled:opacity-50"
+              >
+                {isPosting ? 'Sharing...' : 'Share'}
+              </button>
             </div>
             
-            <div className="aspect-square w-full bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center space-y-4 transition hover:bg-slate-100 cursor-pointer group">
-              <div className="h-16 w-16 rounded-full bg-white shadow-soft flex items-center justify-center group-hover:scale-110 transition">
-                <PlusSquare size={32} className="text-instagram" />
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-slate-900">Select photos and videos</p>
-                <p className="text-xs text-slate-500 mt-1">Drag and drop files here</p>
-              </div>
-              <button className="bg-instagram text-white px-4 py-2 rounded-xl text-xs font-bold shadow-instagram/20 shadow-lg">
-                Select from computer
-              </button>
+            <div 
+              onClick={() => document.getElementById('fileInput')?.click()}
+              className={`aspect-square w-full rounded-3xl border-2 border-dashed flex flex-col items-center justify-center space-y-4 transition cursor-pointer group relative overflow-hidden ${
+                selectedImage ? 'border-transparent bg-slate-900' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+              }`}
+            >
+              {selectedImage ? (
+                <>
+                  <img src={selectedImage} alt="Preview" className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <p className="text-white font-bold text-sm">Change Photo</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-16 w-16 rounded-full bg-white shadow-soft flex items-center justify-center group-hover:scale-110 transition">
+                    <PlusSquare size={32} className="text-instagram" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-slate-900">Select photos (optional)</p>
+                    <p className="text-xs text-slate-500 mt-1">Drag and drop files here</p>
+                  </div>
+                  <button className="bg-instagram text-white px-4 py-2 rounded-xl text-xs font-bold shadow-instagram/20 shadow-lg pointer-events-none">
+                    Select from computer
+                  </button>
+                </>
+              )}
+              <input 
+                id="fileInput"
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageSelect}
+              />
             </div>
 
             <div className="space-y-4">
               <label className="block">
                 <span className="text-sm font-bold text-slate-700">Caption</span>
                 <textarea 
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
                   placeholder="Write a caption..." 
                   className="mt-2 w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm outline-none focus:border-instagram h-32 resize-none"
                 />
               </label>
               
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition">
                 <span className="text-sm font-medium">Add Location</span>
                 <PlusSquare size={20} className="text-slate-400" />
               </div>
               
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition">
                 <span className="text-sm font-medium">Advanced Settings</span>
                 <ArrowRight size={20} className="text-slate-400" />
               </div>
