@@ -34,6 +34,9 @@ export default function HomePage() {
   const [caption, setCaption] = useState('')
   const [isPosting, setIsPosting] = useState(false)
   const [posts, setPosts] = useState<any[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const supabase = createBrowserSupabase()
   const router = useRouter()
 
@@ -63,6 +66,26 @@ export default function HomePage() {
     }
     fetchData()
   }, [])
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query)
+    if (query.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    setIsSearching(true)
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+      .limit(10)
+
+    if (data) {
+      setSearchResults(data)
+    }
+    setIsSearching(false)
+  }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -140,7 +163,7 @@ export default function HomePage() {
       <main className="min-h-screen bg-white px-4 py-10 sm:px-6">
         <div className="mx-auto flex max-w-xl flex-col gap-8 pb-12 pt-8">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft sm:p-8 text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-4">RiseGO</h1>
+            <img src="/logo.png" alt="RiseGO" className="h-16 w-auto mx-auto mb-6" />
             <p className="text-slate-600 mb-8 text-lg">Join the mobile-first social experience.</p>
             <div className="grid gap-3 sm:grid-cols-2 max-w-xs mx-auto">
               <Link href="/signin" className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50">
@@ -161,8 +184,10 @@ export default function HomePage() {
       {/* Sidebar Navigation (Desktop) */}
       <nav className="fixed bottom-0 left-0 z-50 flex w-full border-t border-slate-100 bg-white px-4 py-3 sm:top-0 sm:h-screen sm:w-20 sm:flex-col sm:border-r sm:border-t-0 sm:py-8 md:w-64 md:px-6">
         <div className="hidden items-center gap-3 mb-12 sm:flex md:px-2">
-          <span className="text-2xl font-bold tracking-tighter text-slate-900 md:block hidden">RiseGO</span>
-          <div className="h-8 w-8 rounded-lg bg-instagram sm:block md:hidden"></div>
+          <img src="/logo.png" alt="RiseGO" className="h-10 w-auto md:block hidden" />
+          <div className="h-8 w-8 rounded-lg bg-instagram sm:block md:hidden overflow-hidden">
+            <img src="/icon.png" alt="RiseGO" className="h-full w-full object-cover" />
+          </div>
         </div>
 
         <div className="flex w-full items-center justify-around sm:flex-col sm:items-stretch sm:gap-2">
@@ -290,16 +315,49 @@ export default function HomePage() {
               <input 
                 type="text" 
                 placeholder="Search" 
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="w-full bg-slate-100 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-instagram/20 transition"
               />
             </div>
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-              <div className="h-16 w-16 rounded-full border-2 border-slate-900 flex items-center justify-center">
-                <Search size={32} />
+
+            {searchQuery.length >= 2 ? (
+              <div className="space-y-4">
+                {isSearching ? (
+                  <div className="flex justify-center py-10">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-instagram"></div>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((result) => (
+                    <div key={result.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition">
+                      <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-50">
+                        {result.username[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-slate-900">@{result.username}</span>
+                          {result.is_verified && <VerifiedBadge className="h-4 w-4" />}
+                        </div>
+                        <p className="text-xs text-slate-500">{result.full_name}</p>
+                      </div>
+                      <button className="bg-instagram text-white px-4 py-1.5 rounded-lg text-xs font-bold">Follow</button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-20">
+                    <p className="text-slate-500">No results found for &quot;{searchQuery}&quot;</p>
+                  </div>
+                )}
               </div>
-              <h3 className="text-xl font-bold">Search for content</h3>
-              <p className="text-slate-500">Explore and find interesting people and posts.</p>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                <div className="h-16 w-16 rounded-full border-2 border-slate-900 flex items-center justify-center">
+                  <Search size={32} />
+                </div>
+                <h3 className="text-xl font-bold">Search for content</h3>
+                <p className="text-slate-500">Explore and find interesting people and posts.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -391,15 +449,16 @@ export default function HomePage() {
             
             <div className="space-y-4">
               <SettingsGroup title="Account">
-                <SettingsItem label="Edit Profile" />
-                <SettingsItem label="Change Password" />
-                <SettingsItem label="Privacy & Security" />
+                <SettingsItem label="Edit Profile" onClick={() => alert('Profile editing coming soon!')} />
+                <SettingsItem label="Change Password" onClick={() => alert('Please check your email to reset password.')} />
+                <SettingsItem label="Privacy & Security" onClick={() => alert('Your data is secure with RiseGO.')} />
               </SettingsGroup>
               
               <SettingsGroup title="Support">
-                <SettingsItem label="Help Center" />
-                <SettingsItem label="Report a Problem" />
-                <SettingsItem label="Terms of Service" />
+                <SettingsItem label="Help Center" onClick={() => window.open('https://help.risego.com', '_blank')} />
+                <SettingsItem label="Report a Problem" onClick={() => window.location.href = 'mailto:support@risego.com?subject=Report a Problem'} />
+                <SettingsItem label="Terms of Service" onClick={() => alert('Terms of Service: Be kind and respectful.')} />
+                <SettingsItem label="Email Support" onClick={() => window.location.href = 'mailto:hello@risego.com'} />
               </SettingsGroup>
 
               {user.profile?.role === 'admin' ? (
@@ -481,9 +540,12 @@ function SettingsGroup({ title, children }: any) {
   )
 }
 
-function SettingsItem({ label }: any) {
+function SettingsItem({ label, onClick }: any) {
   return (
-    <div className="p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer text-sm font-medium flex justify-between items-center">
+    <div 
+      onClick={onClick}
+      className="p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer text-sm font-medium flex justify-between items-center transition active:bg-slate-100"
+    >
       {label}
       <ArrowRight size={16} className="text-slate-300" />
     </div>
