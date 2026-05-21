@@ -214,8 +214,12 @@ export default function HomePage() {
         .eq('follower_id', user.id)
         .eq('following_id', targetUserId)
       
-      if (!error) {
-        setFollowing(following.filter(id => id !== targetUserId))
+      if (error) {
+        alert(`Error unfollowing: ${error.message}`)
+      } else {
+        const newFollowing = following.filter(id => id !== targetUserId)
+        setFollowing(newFollowing)
+        setFollowingCount(newFollowing.length)
       }
     } else {
       // Follow
@@ -226,8 +230,12 @@ export default function HomePage() {
           following_id: targetUserId
         })
       
-      if (!error) {
-        setFollowing([...following, targetUserId])
+      if (error) {
+        alert(`Error following: ${error.message}`)
+      } else {
+        const newFollowing = [...following, targetUserId]
+        setFollowing(newFollowing)
+        setFollowingCount(newFollowing.length)
       }
     }
   }
