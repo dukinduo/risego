@@ -214,7 +214,7 @@ export default function HomePage() {
 
   const handleAdminCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (adminCode === '123456') { // This is your secret code
+    if (adminCode === 'RiseGoAdmin2026!') { // Updated to a harder but memorable code
       const { error } = await supabase
         .from('users')
         .update({ role: 'admin' })
