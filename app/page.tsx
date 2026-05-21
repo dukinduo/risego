@@ -47,6 +47,9 @@ export default function HomePage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [following, setFollowing] = useState<string[]>([])
+  const [followerCount, setFollowerCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
   const supabase = createBrowserSupabase()
   const router = useRouter()
 
@@ -61,6 +64,27 @@ export default function HomePage() {
           .eq('id', session.user.id)
           .single()
         setUser({ ...session.user, profile })
+
+        // Get Following
+        const { data: followingData } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', session.user.id)
+        
+        if (followingData) {
+          setFollowing(followingData.map(f => f.following_id))
+          setFollowingCount(followingData.length)
+        }
+
+        // Get Followers Count
+        const { count: followersCount } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', session.user.id)
+        
+        if (followersCount !== null) {
+          setFollowerCount(followersCount)
+        }
       }
 
       // Get Posts
@@ -177,6 +201,35 @@ export default function HomePage() {
       setNewPassword('')
     }
     setIsChangingPassword(false)
+  }
+
+  const handleFollow = async (targetUserId: string) => {
+    const isFollowing = following.includes(targetUserId)
+    
+    if (isFollowing) {
+      // Unfollow
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', targetUserId)
+      
+      if (!error) {
+        setFollowing(following.filter(id => id !== targetUserId))
+      }
+    } else {
+      // Follow
+      const { error } = await supabase
+        .from('follows')
+        .insert({
+          follower_id: user.id,
+          following_id: targetUserId
+        })
+      
+      if (!error) {
+        setFollowing([...following, targetUserId])
+      }
+    }
   }
 
   const handlePost = async () => {
@@ -421,7 +474,18 @@ export default function HomePage() {
                         </div>
                         <p className="text-xs text-slate-500">{result.full_name}</p>
                       </div>
-                      <button className="bg-instagram text-white px-4 py-1.5 rounded-lg text-xs font-bold">Follow</button>
+                      {user.id !== result.id && (
+                        <button 
+                          onClick={() => handleFollow(result.id)}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
+                            following.includes(result.id)
+                              ? 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+                              : 'bg-instagram text-white hover:bg-blue-600'
+                          }`}
+                        >
+                          {following.includes(result.id) ? 'Following' : 'Follow'}
+                        </button>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -490,9 +554,9 @@ export default function HomePage() {
                 </div>
                 
                 <div className="flex justify-around sm:justify-start sm:gap-10 text-sm">
-                  <p><strong>0</strong> posts</p>
-                  <p><strong>0</strong> followers</p>
-                  <p><strong>0</strong> following</p>
+                  <p><strong>{posts.filter(p => p.user_id === user.id).length}</strong> posts</p>
+                  <p><strong>{followerCount}</strong> followers</p>
+                  <p><strong>{followingCount}</strong> following</p>
                 </div>
                 
                 <div className="text-sm">
