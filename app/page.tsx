@@ -18,7 +18,9 @@ import {
   Menu,
   MessageCircle,
   Share2,
-  MoreHorizontal
+  MoreHorizontal,
+  X,
+  Camera
 } from 'lucide-react'
 import { createBrowserSupabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
@@ -37,6 +39,14 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
+  const [editUsername, setEditUsername] = useState('')
+  const [editFullName, setEditFullName] = useState('')
+  const [editAvatarUrl, setEditAvatarUrl] = useState<string | null>(null)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
   const supabase = createBrowserSupabase()
   const router = useRouter()
 
@@ -96,6 +106,77 @@ export default function HomePage() {
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  const handleProfileImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setEditAvatarUrl(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleUpdateProfile = async () => {
+    if (!editUsername || !editFullName) return
+    setIsSavingProfile(true)
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        username: editUsername,
+        full_name: editFullName,
+        avatar_url: editAvatarUrl
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      alert(`Error updating profile: ${error.message}`)
+    } else {
+      // Also update posts if username changed
+      if (editUsername !== user.profile?.username) {
+        await supabase
+          .from('posts')
+          .update({ username: editUsername, full_name: editFullName })
+          .eq('user_id', user.id)
+      }
+
+      setUser({ 
+        ...user, 
+        profile: { 
+          ...user.profile, 
+          username: editUsername, 
+          full_name: editFullName,
+          avatar_url: editAvatarUrl
+        } 
+      })
+      setIsEditProfileOpen(false)
+      alert('Profile updated successfully!')
+    }
+    setIsSavingProfile(false)
+  }
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      alert('Password must be at least 6 characters.')
+      return
+    }
+    setIsChangingPassword(true)
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    })
+
+    if (error) {
+      alert(`Error changing password: ${error.message}`)
+    } else {
+      alert('Password changed successfully!')
+      setIsChangePasswordOpen(false)
+      setNewPassword('')
+    }
+    setIsChangingPassword(false)
   }
 
   const handlePost = async () => {
@@ -377,8 +458,12 @@ export default function HomePage() {
         {activeTab === 'profile' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12 pb-8 border-b border-slate-100">
-              <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 ring-4 ring-slate-50">
-                <User size={64} />
+              <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 ring-4 ring-slate-50 overflow-hidden">
+                {user.profile?.avatar_url ? (
+                  <img src={user.profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <User size={64} />
+                )}
               </div>
               <div className="flex-1 space-y-4 text-center sm:text-left w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -387,7 +472,17 @@ export default function HomePage() {
                     {user.profile?.is_verified && <VerifiedBadge className="h-5 w-5 ml-2" />}
                   </h2>
                   <div className="flex gap-2 justify-center sm:justify-start">
-                    <button className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold">Edit Profile</button>
+                    <button 
+                      onClick={() => {
+                        setEditUsername(user.profile?.username || '')
+                        setEditFullName(user.profile?.full_name || '')
+                        setEditAvatarUrl(user.profile?.avatar_url || null)
+                        setIsEditProfileOpen(true)
+                      }}
+                      className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold"
+                    >
+                      Edit Profile
+                    </button>
                     <button className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg" onClick={() => setActiveTab('settings')}>
                       <Settings size={20} />
                     </button>
@@ -449,8 +544,13 @@ export default function HomePage() {
             
             <div className="space-y-4">
               <SettingsGroup title="Account">
-                <SettingsItem label="Edit Profile" onClick={() => alert('Profile editing coming soon!')} />
-                <SettingsItem label="Change Password" onClick={() => alert('Please check your email to reset password.')} />
+                <SettingsItem label="Edit Profile" onClick={() => {
+                  setEditUsername(user.profile?.username || '')
+                  setEditFullName(user.profile?.full_name || '')
+                  setEditAvatarUrl(user.profile?.avatar_url || null)
+                  setIsEditProfileOpen(true)
+                }} />
+                <SettingsItem label="Change Password" onClick={() => setIsChangePasswordOpen(true)} />
                 <SettingsItem label="Privacy & Security" onClick={() => alert('Your data is secure with RiseGO.')} />
               </SettingsGroup>
               
@@ -507,6 +607,117 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {/* Edit Profile Modal */}
+      {isEditProfileOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-900">Edit Profile</h3>
+              <button onClick={() => setIsEditProfileOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <div 
+                  onClick={() => document.getElementById('avatarInput')?.click()}
+                  className="relative h-24 w-24 rounded-full bg-slate-100 flex items-center justify-center border-2 border-slate-100 cursor-pointer group overflow-hidden"
+                >
+                  {editAvatarUrl ? (
+                    <img src={editAvatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-bold text-slate-400">
+                      {editUsername[0]?.toUpperCase() || 'U'}
+                    </span>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <Camera size={24} className="text-white" />
+                  </div>
+                </div>
+                <input 
+                  id="avatarInput"
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleProfileImageSelect}
+                />
+                <button 
+                  onClick={() => document.getElementById('avatarInput')?.click()}
+                  className="text-instagram text-sm font-bold"
+                >
+                  Change Profile Photo
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Username</label>
+                  <input 
+                    type="text" 
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    className="mt-1 w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-instagram transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Display Name</label>
+                  <input 
+                    type="text" 
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="mt-1 w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-instagram transition"
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleUpdateProfile}
+                disabled={isSavingProfile}
+                className="w-full bg-instagram text-white rounded-2xl py-4 font-bold shadow-instagram/20 shadow-lg hover:bg-blue-600 transition disabled:opacity-50"
+              >
+                {isSavingProfile ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-900">Change Password</h3>
+              <button onClick={() => setIsChangePasswordOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">New Password</label>
+                <input 
+                  type="password" 
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="mt-1 w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-instagram transition"
+                />
+              </div>
+
+              <button 
+                onClick={handleChangePassword}
+                disabled={isChangingPassword}
+                className="w-full bg-slate-900 text-white rounded-2xl py-4 font-bold shadow-slate-900/10 shadow-lg hover:bg-slate-800 transition disabled:opacity-50"
+              >
+                {isChangingPassword ? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

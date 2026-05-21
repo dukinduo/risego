@@ -36,10 +36,14 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { userId, action } = body as { userId: string; action: string }
+  const { userId, action, newUsername } = body as { userId: string; action: string; newUsername?: string }
 
   const updates: Partial<Database['public']['Tables']['users']['Update']> = {}
   switch (action) {
+    case 'change_username':
+      if (!newUsername) return NextResponse.json({ error: 'New username is required' }, { status: 400 })
+      updates.username = newUsername
+      break
     case 'verify':
       updates.is_verified = true
       break
@@ -75,6 +79,14 @@ export async function POST(request: Request) {
 
   if (error || !data) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // If username was changed, update posts table as well
+  if (action === 'change_username' && newUsername) {
+    await adminClient
+      .from('posts')
+      .update({ username: newUsername })
+      .eq('user_id', userId)
   }
 
   return NextResponse.json(data)

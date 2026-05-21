@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, ShieldAlert, ShieldClose, Trash2, UserCheck, Shield, ShieldOff } from 'lucide-react'
+import { CheckCircle2, ShieldAlert, ShieldClose, Trash2, UserCheck, Shield, ShieldOff, UserCog } from 'lucide-react'
 import type { Database } from '@/types/supabase'
 import { VerifiedBadge } from './VerifiedBadge'
 
@@ -18,22 +18,25 @@ const actionLabels: Record<string, string> = {
   unban: 'Unban',
   terminate: 'Terminate',
   make_admin: 'Grant Admin',
-  remove_admin: 'Revoke Admin'
+  remove_admin: 'Revoke Admin',
+  change_username: 'Rename'
 }
 
 export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
   const [users, setUsers] = useState(initialUsers)
   const [savingId, setSavingId] = useState<string | null>(null)
 
-  const updateRow = async (userId: string, action: string) => {
+  const updateRow = async (userId: string, action: string, extraData: any = {}) => {
     setSavingId(userId)
     const response = await fetch('/api/admin/user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, action }),
+      body: JSON.stringify({ userId, action, ...extraData }),
     })
 
     if (!response.ok) {
+      const err = await response.json()
+      alert(`Error: ${err.error || 'Failed to update user'}`)
       setSavingId(null)
       return
     }
@@ -43,6 +46,13 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
       current.map((item) => (item.id === result.id ? { ...item, ...result } : item)),
     )
     setSavingId(null)
+  }
+
+  const handleChangeUsername = (userId: string, currentUsername: string) => {
+    const newUsername = window.prompt('Enter new username:', currentUsername)
+    if (newUsername && newUsername !== currentUsername) {
+      updateRow(userId, 'change_username', { newUsername })
+    }
   }
 
   return (
@@ -65,8 +75,12 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
                 <tr key={user.id} className="hover:bg-slate-50">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-700">
-                        {user.full_name.slice(0, 2).toUpperCase()}
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-700 overflow-hidden">
+                        {user.avatar_url ? (
+                          <img src={user.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                        ) : (
+                          user.full_name.slice(0, 2).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <p className="font-semibold text-slate-900">
@@ -128,6 +142,16 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
                       >
                         {user.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
                         {actionLabels[user.role === 'admin' ? 'remove_admin' : 'make_admin']}
+                      </button>
+
+                      <button
+                        disabled={savingId === user.id}
+                        type="button"
+                        onClick={() => handleChangeUsername(user.id, user.username)}
+                        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300"
+                      >
+                        <UserCog className="h-4 w-4" />
+                        Rename
                       </button>
 
                       {user.status !== 'banned' && user.status !== 'terminated' ? (
