@@ -72,7 +72,7 @@ export default function HomePage() {
           .eq('follower_id', session.user.id)
         
         if (followingData) {
-          setFollowing(followingData.map(f => f.following_id))
+          setFollowing(followingData.map((f: any) => f.following_id))
           setFollowingCount(followingData.length)
         }
 
