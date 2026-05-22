@@ -225,9 +225,6 @@ export default function HomePage() {
       
       if (error) {
         console.error('Unfollow error:', error.message)
-        // Revert on error
-        setFollowing(prevFollowing)
-        setFollowingCount(prevCount)
       }
     } else {
       const newFollowing = [...following, targetUserId]
@@ -243,9 +240,6 @@ export default function HomePage() {
       
       if (error) {
         console.error('Follow error:', error.message)
-        // Revert on error
-        setFollowing(prevFollowing)
-        setFollowingCount(prevCount)
       }
     }
   }
