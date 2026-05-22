@@ -204,10 +204,19 @@ export default function HomePage() {
   }
 
   const handleFollow = async (targetUserId: string) => {
+    if (!user) return
+    
     const isFollowing = following.includes(targetUserId)
     
+    // Optimistic Update
+    const prevFollowing = [...following]
+    const prevCount = followingCount
+    
     if (isFollowing) {
-      // Unfollow
+      const newFollowing = following.filter(id => id !== targetUserId)
+      setFollowing(newFollowing)
+      setFollowingCount(newFollowing.length)
+      
       const { error } = await supabase
         .from('follows')
         .delete()
@@ -216,13 +225,15 @@ export default function HomePage() {
       
       if (error) {
         console.error('Unfollow error:', error.message)
-      } else {
-        const newFollowing = following.filter(id => id !== targetUserId)
-        setFollowing(newFollowing)
-        setFollowingCount(newFollowing.length)
+        // Revert on error
+        setFollowing(prevFollowing)
+        setFollowingCount(prevCount)
       }
     } else {
-      // Follow
+      const newFollowing = [...following, targetUserId]
+      setFollowing(newFollowing)
+      setFollowingCount(newFollowing.length)
+      
       const { error } = await supabase
         .from('follows')
         .insert({
@@ -232,10 +243,9 @@ export default function HomePage() {
       
       if (error) {
         console.error('Follow error:', error.message)
-      } else {
-        const newFollowing = [...following, targetUserId]
-        setFollowing(newFollowing)
-        setFollowingCount(newFollowing.length)
+        // Revert on error
+        setFollowing(prevFollowing)
+        setFollowingCount(prevCount)
       }
     }
   }
