@@ -215,11 +215,7 @@ export default function HomePage() {
         .eq('following_id', targetUserId)
       
       if (error) {
-        if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
-          alert('Follow feature requires database setup. Please run scripts/create_follows_table.sql in Supabase.')
-        } else {
-          alert(`Error unfollowing: ${error.message}`)
-        }
+        console.error('Unfollow error:', error.message)
       } else {
         const newFollowing = following.filter(id => id !== targetUserId)
         setFollowing(newFollowing)
@@ -235,11 +231,7 @@ export default function HomePage() {
         })
       
       if (error) {
-        if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
-          alert('Follow feature requires database setup. Please run scripts/create_follows_table.sql in Supabase.')
-        } else {
-          alert(`Error following: ${error.message}`)
-        }
+        console.error('Follow error:', error.message)
       } else {
         const newFollowing = [...following, targetUserId]
         setFollowing(newFollowing)
