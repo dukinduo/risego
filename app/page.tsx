@@ -50,11 +50,34 @@ export default function HomePage() {
   const [following, setFollowing] = useState<string[]>([])
   const [followerCount, setFollowerCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
+  const [dbError, setDbError] = useState<string | null>(null)
   const supabase = createBrowserSupabase()
   const router = useRouter()
 
   useEffect(() => {
     async function fetchData() {
+      // Check if tables exist
+      const { error: usersError } = await supabase.from('users').select('id').limit(1)
+      if (usersError && (usersError.message.includes('schema cache') || usersError.message.includes('does not exist'))) {
+        setDbError('Database setup required: The `public.users` table does not exist.')
+        setLoading(false)
+        return
+      }
+
+      const { error: followsError } = await supabase.from('follows').select('follower_id').limit(1)
+      if (followsError && (followsError.message.includes('schema cache') || followsError.message.includes('does not exist'))) {
+        setDbError('Database setup required: The `public.follows` table does not exist. Please run the SQL in scripts/create_follows_table.sql')
+        setLoading(false)
+        return
+      }
+
+      const { error: postsError } = await supabase.from('posts').select('id').limit(1)
+      if (postsError && (postsError.message.includes('schema cache') || postsError.message.includes('does not exist'))) {
+        setDbError('Database setup required: The `public.posts` table does not exist. Please run the SQL in scripts/create_posts_table.sql')
+        setLoading(false)
+        return
+      }
+
       // Get User
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
@@ -297,6 +320,24 @@ export default function HomePage() {
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-instagram"></div>
       </div>
+    )
+  }
+
+  if (dbError) {
+    return (
+      <main className="min-h-screen bg-white px-4 py-20 sm:px-6">
+        <div className="mx-auto max-w-md rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center shadow-soft">
+          <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-amber-600" />
+          <h2 className="mb-2 text-xl font-bold text-amber-900">Setup Required</h2>
+          <p className="text-sm text-amber-800 mb-6">{dbError}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </main>
     )
   }
 

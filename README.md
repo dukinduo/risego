@@ -24,10 +24,9 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 ## Database Schema
-Run the SQL in `scripts/create_users_table.sql` using the Supabase SQL editor, or copy the SQL below.
+Run the following SQL scripts in the Supabase SQL editor to create the required tables and policies.
 
-If you see `Could not find the table 'public.users' in the schema cache`, this table has not been created yet.
-
+### 1. Users Table
 ```sql
 create table if not exists public.users (
   id uuid primary key references auth.users(id),
@@ -41,6 +40,47 @@ create table if not exists public.users (
   created_at timestamp with time zone not null default now()
 );
 ```
+
+### 2. Posts Table
+```sql
+create table if not exists public.posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id),
+  username text not null,
+  full_name text not null,
+  is_verified boolean not null default false,
+  caption text,
+  image_url text,
+  likes integer not null default 0,
+  comments integer not null default 0,
+  created_at timestamp with time zone not null default now()
+);
+
+alter table public.posts enable row level security;
+
+create policy "Allow everyone to read posts" on public.posts for select using (true);
+create policy "Allow authenticated users to create posts" on public.posts for insert with check (auth.uid() = user_id);
+create policy "Allow users to update their own posts" on public.posts for update using (auth.uid() = user_id);
+create policy "Allow users to delete their own posts" on public.posts for delete using (auth.uid() = user_id);
+```
+
+### 3. Follows Table
+```sql
+create table if not exists public.follows (
+  follower_id uuid not null references auth.users(id),
+  following_id uuid not null references auth.users(id),
+  created_at timestamp with time zone not null default now(),
+  primary key (follower_id, following_id)
+);
+
+alter table public.follows enable row level security;
+
+create policy "Allow everyone to read follows" on public.follows for select using (true);
+create policy "Allow authenticated users to follow" on public.follows for insert with check (auth.uid() = follower_id);
+create policy "Allow users to unfollow" on public.follows for delete using (auth.uid() = follower_id);
+```
+
+If you see `Could not find the table 'public.X' in the schema cache`, it means that specific table has not been created yet.
 
 ## Local Development
 1. Install dependencies:
