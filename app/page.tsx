@@ -99,7 +99,45 @@ export default function HomePage() {
       setLoading(false)
     }
     fetchData()
-  }, [])
+  }, [supabase])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const followsSubscription = supabase
+      .channel('follows_changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'follows' 
+      }, async () => {
+        // Refresh follower count
+        const { count: newFollowers } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', user.id)
+        
+        if (newFollowers !== null) {
+          setFollowerCount(newFollowers)
+        }
+
+        // Refresh following list and count
+        const { data: newFollowing } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', user.id)
+        
+        if (newFollowing) {
+          setFollowing(newFollowing.map((f: any) => f.following_id))
+          setFollowingCount(newFollowing.length)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(followsSubscription)
+    }
+  }, [user?.id, supabase])
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query)
@@ -159,11 +197,15 @@ export default function HomePage() {
     if (error) {
       alert(`Error updating profile: ${error.message}`)
     } else {
-      // Also update posts if username changed
-      if (editUsername !== user.profile?.username) {
+      // Also update posts if profile info changed
+      if (editUsername !== user.profile?.username || editFullName !== user.profile?.full_name || editAvatarUrl !== user.profile?.avatar_url) {
         await supabase
           .from('posts')
-          .update({ username: editUsername, full_name: editFullName })
+          .update({ 
+            username: editUsername, 
+            full_name: editFullName,
+            avatar_url: editAvatarUrl 
+          })
           .eq('user_id', user.id)
       }
 
@@ -254,6 +296,7 @@ export default function HomePage() {
         user_id: user.id,
         username: user.profile?.username,
         full_name: user.profile?.full_name,
+        avatar_url: user.profile?.avatar_url,
         is_verified: user.profile?.is_verified,
         caption: caption,
         image_url: selectedImage, // In a real app, you'd upload this to Supabase Storage first
@@ -845,8 +888,12 @@ function PostCard({ post }: { post: any }) {
       {/* Post Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50">
-            {post.username[0].toUpperCase()}
+          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden">
+            {post.avatar_url ? (
+              <img src={post.avatar_url} alt={post.username} className="h-full w-full object-cover" />
+            ) : (
+              post.username[0].toUpperCase()
+            )}
           </div>
           <div>
             <div className="flex items-center gap-1">

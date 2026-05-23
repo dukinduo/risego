@@ -4,6 +4,7 @@ create table if not exists public.posts (
   user_id uuid not null references auth.users(id),
   username text not null,
   full_name text not null,
+  avatar_url text,
   is_verified boolean not null default false,
   caption text,
   image_url text,
