@@ -87,10 +87,18 @@ export default function HomePage() {
         }
       }
 
-      // Get Posts
+      // Get Posts with User Info
       const { data: postsData } = await supabase
         .from('posts')
-        .select('*')
+        .select(`
+          *,
+          users:user_id (
+            username,
+            full_name,
+            avatar_url,
+            is_verified
+          )
+        `)
         .order('created_at', { ascending: false })
       
       if (postsData) {
@@ -111,6 +119,8 @@ export default function HomePage() {
         schema: 'public', 
         table: 'follows' 
       }, async () => {
+        if (!user?.id) return
+        
         // Refresh follower count
         const { count: newFollowers } = await supabase
           .from('follows')
@@ -267,6 +277,8 @@ export default function HomePage() {
       
       if (error) {
         console.error('Unfollow error:', error.message)
+        setFollowing(prevFollowing)
+        setFollowingCount(prevCount)
       }
     } else {
       const newFollowing = [...following, targetUserId]
@@ -282,7 +294,25 @@ export default function HomePage() {
       
       if (error) {
         console.error('Follow error:', error.message)
+        setFollowing(prevFollowing)
+        setFollowingCount(prevCount)
       }
+    }
+
+    // Refresh counts from DB to be sure
+    const { count: followers } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', user.id)
+    if (followers !== null) setFollowerCount(followers)
+
+    const { data: followings } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', user.id)
+    if (followings) {
+      setFollowing(followings.map((f: any) => f.following_id))
+      setFollowingCount(followings.length)
     }
   }
 
@@ -883,22 +913,26 @@ function SettingsItem({ label, onClick }: any) {
 }
 
 function PostCard({ post }: { post: any }) {
+  const displayUsername = post.users?.username || post.username
+  const displayAvatar = post.users?.avatar_url || post.avatar_url
+  const displayIsVerified = post.users?.is_verified ?? post.is_verified
+
   return (
     <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-soft animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Post Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden">
-            {post.avatar_url ? (
-              <img src={post.avatar_url} alt={post.username} className="h-full w-full object-cover" />
+            {displayAvatar ? (
+              <img src={displayAvatar} alt={displayUsername} className="h-full w-full object-cover" />
             ) : (
-              post.username[0].toUpperCase()
+              displayUsername ? displayUsername[0].toUpperCase() : '?'
             )}
           </div>
           <div>
             <div className="flex items-center gap-1">
-              <span className="text-sm font-bold text-slate-900">@{post.username}</span>
-              {post.is_verified && <VerifiedBadge className="h-4 w-4" />}
+              <span className="text-sm font-bold text-slate-900">@{displayUsername}</span>
+              {displayIsVerified && <VerifiedBadge className="h-4 w-4" />}
             </div>
             <p className="text-[10px] text-slate-400 font-medium">Original audio • 1h</p>
           </div>
@@ -937,7 +971,7 @@ function PostCard({ post }: { post: any }) {
         <div className="space-y-1.5">
           <p className="text-sm font-bold text-slate-900">{post.likes.toLocaleString()} likes</p>
           <div className="text-sm">
-            <span className="font-bold text-slate-900 mr-2">@{post.username}</span>
+            <span className="font-bold text-slate-900 mr-2">@{displayUsername}</span>
             <span className="text-slate-700 leading-relaxed">{post.caption}</span>
           </div>
           <button className="text-sm text-slate-400 font-medium block">
@@ -951,8 +985,12 @@ function PostCard({ post }: { post: any }) {
 
       {/* Comment Input */}
       <div className="px-4 py-3 border-t border-slate-50 flex items-center gap-3">
-        <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400">
-          U
+        <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400 overflow-hidden">
+          {displayAvatar ? (
+            <img src={displayAvatar} alt="User" className="h-full w-full object-cover" />
+          ) : (
+            'U'
+          )}
         </div>
         <input 
           type="text" 
