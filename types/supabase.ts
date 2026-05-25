@@ -26,6 +26,7 @@ export interface Database {
           user_id: string
           username: string
           full_name: string
+          avatar_url: string | null
           is_verified: boolean
           caption: string | null
           image_url: string | null
@@ -38,6 +39,7 @@ export interface Database {
           user_id: string
           username: string
           full_name: string
+          avatar_url?: string | null
           is_verified?: boolean
           caption?: string | null
           image_url?: string | null
@@ -50,6 +52,7 @@ export interface Database {
           user_id?: string
           username?: string
           full_name?: string
+          avatar_url?: string | null
           is_verified?: boolean
           caption?: string | null
           image_url?: string | null
