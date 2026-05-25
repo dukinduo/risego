@@ -80,7 +80,7 @@ export default async function ProfilePage({ params }: Props) {
 
         {posts && posts.length > 0 ? (
           <div className="space-y-4">
-            {posts.map((post) => (
+            {posts.map((post: Database['public']['Tables']['posts']['Row']) => (
               <article key={post.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 {post.image_url ? (
                   <img src={post.image_url} alt={post.caption || 'Post image'} className="mb-4 h-72 w-full rounded-2xl object-cover" />
