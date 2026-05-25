@@ -326,8 +326,6 @@ export default function HomePage() {
         user_id: user.id,
         username: user.profile?.username,
         full_name: user.profile?.full_name,
-        avatar_url: user.profile?.avatar_url,
-        is_verified: user.profile?.is_verified,
         caption: caption,
         image_url: selectedImage, // In a real app, you'd upload this to Supabase Storage first
       })
