@@ -89,37 +89,5 @@ export async function POST(request: Request) {
       .eq('user_id', userId)
   }
 
-  // Handle email/password changes that require auth admin methods
-  if (action === 'change_email' || action === 'change_password') {
-    try {
-      if (!('newEmail' in body) && action === 'change_email') {
-        return NextResponse.json({ error: 'New email is required' }, { status: 400 })
-      }
-      if (!('newPassword' in body) && action === 'change_password') {
-        return NextResponse.json({ error: 'New password is required' }, { status: 400 })
-      }
-
-      // Use the service role client to update auth user
-      if (action === 'change_email') {
-        const { data: authResult, error: authError } = await adminClient.auth.admin.updateUserById(userId, {
-          email: body.newEmail,
-        })
-        if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
-
-        // Also update the public.users table email
-        await adminClient.from('users').update({ email: body.newEmail }).eq('id', userId)
-      }
-
-      if (action === 'change_password') {
-        const { data: authResult, error: authError } = await adminClient.auth.admin.updateUserById(userId, {
-          password: body.newPassword,
-        })
-        if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
-      }
-    } catch (err: any) {
-      return NextResponse.json({ error: err.message || 'Failed to update auth' }, { status: 500 })
-    }
-  }
-
   return NextResponse.json(data)
 }

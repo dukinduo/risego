@@ -299,7 +299,13 @@ export default function HomePage() {
       }
     }
 
-    // Refresh following list for current user
+    // Refresh counts from DB to be sure
+    const { count: followers } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', user.id)
+    if (followers !== null) setFollowerCount(followers)
+
     const { data: followings } = await supabase
       .from('follows')
       .select('following_id')
@@ -307,17 +313,6 @@ export default function HomePage() {
     if (followings) {
       setFollowing(followings.map((f: any) => f.following_id))
       setFollowingCount(followings.length)
-    }
-
-    // If we're viewing the target user's profile, refresh their follower count
-    if (targetUserId) {
-      const { count: followersOfTarget } = await supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', targetUserId)
-      if (followersOfTarget !== null && targetUserId === user.id) {
-        setFollowerCount(followersOfTarget)
-      }
     }
   }
 
@@ -331,7 +326,8 @@ export default function HomePage() {
         user_id: user.id,
         username: user.profile?.username,
         full_name: user.profile?.full_name,
-        // Note: avoid inserting `avatar_url`/`is_verified` here to match the DB schema
+        avatar_url: user.profile?.avatar_url,
+        is_verified: user.profile?.is_verified,
         caption: caption,
         image_url: selectedImage, // In a real app, you'd upload this to Supabase Storage first
       })
@@ -917,47 +913,6 @@ function SettingsItem({ label, onClick }: any) {
 }
 
 function PostCard({ post }: { post: any }) {
-  const router = useRouter()
-  const [likes, setLikes] = useState<number>(post.likes || 0)
-  const [liked, setLiked] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem('liked_posts')
-      if (!raw) return false
-      const set = JSON.parse(raw) as string[]
-      return set.includes(post.id)
-    } catch (e) {
-      return false
-    }
-  })
-
-  const toggleLike = async () => {
-    const newLiked = !liked
-    setLiked(newLiked)
-    setLikes((l) => l + (newLiked ? 1 : -1))
-
-    // persist local preference
-    try {
-      const raw = localStorage.getItem('liked_posts')
-      const arr = raw ? (JSON.parse(raw) as string[]) : []
-      if (newLiked) arr.push(post.id)
-      else {
-        const idx = arr.indexOf(post.id)
-        if (idx >= 0) arr.splice(idx, 1)
-      }
-      localStorage.setItem('liked_posts', JSON.stringify(arr))
-    } catch (e) {}
-
-    // notify server (best-effort)
-    try {
-      await fetch('/api/posts/like', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: post.id, action: newLiked ? 'like' : 'unlike' }),
-      })
-    } catch (e) {
-      // ignore server errors for now
-    }
-  }
   const displayUsername = post.users?.username || post.username
   const displayAvatar = post.users?.avatar_url || post.avatar_url
   const displayIsVerified = post.users?.is_verified ?? post.is_verified
@@ -967,10 +922,7 @@ function PostCard({ post }: { post: any }) {
       {/* Post Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div
-            onClick={() => router.push(`/profile/${post.user_id}`)}
-            className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden cursor-pointer"
-          >
+          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden">
             {displayAvatar ? (
               <img src={displayAvatar} alt={displayUsername} className="h-full w-full object-cover" />
             ) : (
@@ -979,9 +931,7 @@ function PostCard({ post }: { post: any }) {
           </div>
           <div>
             <div className="flex items-center gap-1">
-              <button onClick={() => router.push(`/profile/${post.user_id}`)} className="text-sm font-bold text-slate-900 cursor-pointer">
-                @{displayUsername}
-              </button>
+              <span className="text-sm font-bold text-slate-900">@{displayUsername}</span>
               {displayIsVerified && <VerifiedBadge className="h-4 w-4" />}
             </div>
             <p className="text-[10px] text-slate-400 font-medium">Original audio • 1h</p>
@@ -1003,8 +953,8 @@ function PostCard({ post }: { post: any }) {
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 text-slate-800">
-            <button onClick={toggleLike} className={`transition scale-110 active:scale-125 ${liked ? 'text-red-500' : ''}`}>
-              <Heart size={24} fill={liked ? 'red' : undefined} />
+            <button className="hover:text-red-500 transition scale-110 active:scale-125">
+              <Heart size={24} />
             </button>
             <button className="hover:text-slate-500 transition">
               <MessageCircle size={24} />

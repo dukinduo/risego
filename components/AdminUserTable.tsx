@@ -55,22 +55,6 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
     }
   }
 
-  const handleChangeEmail = (userId: string, currentEmail: string) => {
-    const newEmail = window.prompt('Enter new email:', currentEmail)
-    if (newEmail && newEmail !== currentEmail) {
-      updateRow(userId, 'change_email', { newEmail })
-    }
-  }
-
-  const handleChangePassword = (userId: string) => {
-    const newPassword = window.prompt('Enter new password (min 6 chars):', '')
-    if (newPassword && newPassword.length >= 6) {
-      updateRow(userId, 'change_password', { newPassword })
-    } else if (newPassword) {
-      alert('Password must be at least 6 characters.')
-    }
-  }
-
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-soft">
       <div className="grid gap-4 p-5 sm:p-6">
@@ -168,26 +152,6 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
                       >
                         <UserCog className="h-4 w-4" />
                         Rename
-                      </button>
-
-                      <button
-                        disabled={savingId === user.id}
-                        type="button"
-                        onClick={() => handleChangeEmail(user.id, user.email)}
-                        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300"
-                      >
-                        <UserCog className="h-4 w-4" />
-                        Change Email
-                      </button>
-
-                      <button
-                        disabled={savingId === user.id}
-                        type="button"
-                        onClick={() => handleChangePassword(user.id)}
-                        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300"
-                      >
-                        <UserCog className="h-4 w-4" />
-                        Change Password
                       </button>
 
                       {user.status !== 'banned' && user.status !== 'terminated' ? (
