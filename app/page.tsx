@@ -911,16 +911,59 @@ function SettingsItem({ label, onClick }: any) {
 }
 
 function PostCard({ post }: { post: any }) {
+  const router = useRouter()
   const displayUsername = post.users?.username || post.username
   const displayAvatar = post.users?.avatar_url || post.avatar_url
   const displayIsVerified = post.users?.is_verified ?? post.is_verified
+  const [likes, setLikes] = useState<number>(post.likes || 0)
+  const [liked, setLiked] = useState<boolean>(() => {
+    try {
+      if (typeof window === 'undefined') return false
+      const raw = localStorage.getItem('liked_posts')
+      if (!raw) return false
+      const set = JSON.parse(raw) as string[]
+      return set.includes(post.id)
+    } catch (e) {
+      return false
+    }
+  })
+
+  const toggleLike = async () => {
+    const newLiked = !liked
+    setLiked(newLiked)
+    setLikes((l) => l + (newLiked ? 1 : -1))
+
+    try {
+      const raw = localStorage.getItem('liked_posts')
+      const arr = raw ? (JSON.parse(raw) as string[]) : []
+      if (newLiked) arr.push(post.id)
+      else {
+        const idx = arr.indexOf(post.id)
+        if (idx >= 0) arr.splice(idx, 1)
+      }
+      localStorage.setItem('liked_posts', JSON.stringify(arr))
+    } catch (e) {}
+
+    try {
+      await fetch('/api/posts/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, action: newLiked ? 'like' : 'unlike' }),
+      })
+    } catch (e) {
+      // ignore
+    }
+  }
 
   return (
     <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-soft animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Post Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden">
+          <div
+            onClick={() => router.push(`/profile/${post.user_id}`)}
+            className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden cursor-pointer"
+          >
             {displayAvatar ? (
               <img src={displayAvatar} alt={displayUsername} className="h-full w-full object-cover" />
             ) : (
@@ -929,7 +972,9 @@ function PostCard({ post }: { post: any }) {
           </div>
           <div>
             <div className="flex items-center gap-1">
-              <span className="text-sm font-bold text-slate-900">@{displayUsername}</span>
+              <button onClick={() => router.push(`/profile/${post.user_id}`)} className="text-sm font-bold text-slate-900 cursor-pointer">
+                @{displayUsername}
+              </button>
               {displayIsVerified && <VerifiedBadge className="h-4 w-4" />}
             </div>
             <p className="text-[10px] text-slate-400 font-medium">Original audio • 1h</p>

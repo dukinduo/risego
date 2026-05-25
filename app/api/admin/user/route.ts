@@ -5,7 +5,8 @@ import type { Database } from '@/types/supabase'
 
 const createServiceClient = () => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Supabase configuration is missing. NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in your .env.local file.')
+    // Don't throw at module load — return null so handlers can respond with 501
+    return null
   }
 
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -70,6 +71,10 @@ export async function POST(request: Request) {
   }
 
   const adminClient = createServiceClient()
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Service role key not configured' }, { status: 501 })
+  }
+
   const { data, error } = await adminClient
     .from('users')
     .update(updates)
