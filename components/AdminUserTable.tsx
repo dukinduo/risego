@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, ShieldAlert, ShieldClose, Trash2, UserCheck, Shield, ShieldOff, UserCog } from 'lucide-react'
+import { CheckCircle2, ShieldAlert, ShieldClose, Trash2, UserCheck, Shield, ShieldOff, UserCog, Mail, Lock } from 'lucide-react'
 import type { Database } from '@/types/supabase'
 import { VerifiedBadge } from './VerifiedBadge'
 
@@ -19,7 +19,9 @@ const actionLabels: Record<string, string> = {
   terminate: 'Terminate',
   make_admin: 'Grant Admin',
   remove_admin: 'Revoke Admin',
-  change_username: 'Rename'
+  change_username: 'Rename',
+  change_email: 'Change Email',
+  change_password: 'Change Password'
 }
 
 export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
@@ -42,9 +44,14 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
     }
 
     const result = await response.json()
-    setUsers((current) =>
-      current.map((item) => (item.id === result.id ? { ...item, ...result } : item)),
-    )
+    // For password change, result might just be success message
+    if (action === 'change_password') {
+      alert('Password updated successfully')
+    } else {
+      setUsers((current) =>
+        current.map((item) => (item.id === result.id ? { ...item, ...result } : item)),
+      )
+    }
     setSavingId(null)
   }
 
@@ -52,6 +59,24 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
     const newUsername = window.prompt('Enter new username:', currentUsername)
     if (newUsername && newUsername !== currentUsername) {
       updateRow(userId, 'change_username', { newUsername })
+    }
+  }
+
+  const handleChangeEmail = (userId: string, currentEmail: string) => {
+    const newEmail = window.prompt('Enter new email address:', currentEmail)
+    if (newEmail && newEmail !== currentEmail) {
+      updateRow(userId, 'change_email', { newEmail })
+    }
+  }
+
+  const handleChangePassword = (userId: string) => {
+    const newPassword = window.prompt('Enter new password (min 6 characters):')
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        alert('Password must be at least 6 characters')
+        return
+      }
+      updateRow(userId, 'change_password', { newPassword })
     }
   }
 
@@ -152,6 +177,26 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
                       >
                         <UserCog className="h-4 w-4" />
                         Rename
+                      </button>
+
+                      <button
+                        disabled={savingId === user.id}
+                        type="button"
+                        onClick={() => handleChangeEmail(user.id, user.email)}
+                        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Email
+                      </button>
+
+                      <button
+                        disabled={savingId === user.id}
+                        type="button"
+                        onClick={() => handleChangePassword(user.id)}
+                        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300"
+                      >
+                        <Lock className="h-4 w-4" />
+                        Password
                       </button>
 
                       {user.status !== 'banned' && user.status !== 'terminated' ? (

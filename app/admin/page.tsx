@@ -83,7 +83,38 @@ export default async function AdminPage() {
           </div>
         </div>
 
-        <AdminUserTable initialUsers={users} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <AdminUserTable initialUsers={users} />
+          </div>
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Ad Management</h2>
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-instagram uppercase tracking-wider">Active Ad</span>
+                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                  </div>
+                  <h3 className="font-bold text-slate-900">Castyr Live Promotion</h3>
+                  <p className="text-xs text-slate-500 mt-1">Status: Live on Feed</p>
+                </div>
+                
+                <div className="border border-slate-100 rounded-2xl overflow-hidden bg-white">
+                  <img src="/castyr-live.png" alt="Castyr Live Ad" className="w-full aspect-video object-cover" />
+                  <div className="p-4">
+                    <p className="text-xs font-medium text-slate-700 line-clamp-3">
+                      🎥 Go Live Bigger with Castyr Live... Whether you’re hosting a live event, streaming gameplay, running online classes...
+                    </p>
+                    <button className="mt-4 w-full py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition">
+                      Edit Advertisement
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   )

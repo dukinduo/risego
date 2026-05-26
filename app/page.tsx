@@ -430,6 +430,33 @@ export default function HomePage() {
       <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-8">
         {activeTab === 'feed' && (
           <div className="max-w-xl mx-auto space-y-8 animate-in fade-in duration-700">
+            {/* Castyr Live Featured Ad */}
+            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl overflow-hidden shadow-lg border border-white/10 relative group">
+              <div className="absolute top-4 right-4 z-10">
+                <span className="px-2 py-1 bg-black/20 backdrop-blur-md rounded-lg text-[10px] font-bold text-white uppercase tracking-wider border border-white/10">Sponsored</span>
+              </div>
+              <div className="aspect-video w-full overflow-hidden">
+                <img src="/castyr-live.png" alt="Castyr Live" className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
+              </div>
+              <div className="p-6 text-white">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                    <Camera className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg leading-tight">Go Live Bigger with Castyr Live</h3>
+                    <p className="text-white/60 text-xs">castyr.live</p>
+                  </div>
+                </div>
+                <p className="text-sm text-white/80 leading-relaxed mb-6">
+                  Whether you’re hosting a live event, streaming gameplay, or building your brand, Castyr Live gives you the tools to stream with confidence.
+                </p>
+                <button className="w-full py-3 bg-white text-indigo-600 font-bold rounded-2xl hover:bg-slate-50 transition shadow-xl shadow-indigo-900/20">
+                  Start Broadcasting Today
+                </button>
+              </div>
+            </div>
+
             {posts.length > 0 ? (
               posts.map((post) => (
                 <PostCard key={post.id} post={post} />

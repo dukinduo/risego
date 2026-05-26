@@ -37,7 +37,18 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { userId, action, newUsername } = body as { userId: string; action: string; newUsername?: string }
+  const { userId, action, newUsername, newEmail, newPassword } = body as { 
+    userId: string; 
+    action: string; 
+    newUsername?: string;
+    newEmail?: string;
+    newPassword?: string;
+  }
+
+  const adminClient = createServiceClient()
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Service role key not configured' }, { status: 501 })
+  }
 
   const updates: Partial<Database['public']['Tables']['users']['Update']> = {}
   switch (action) {
@@ -45,6 +56,17 @@ export async function POST(request: Request) {
       if (!newUsername) return NextResponse.json({ error: 'New username is required' }, { status: 400 })
       updates.username = newUsername
       break
+    case 'change_email':
+      if (!newEmail) return NextResponse.json({ error: 'New email is required' }, { status: 400 })
+      const { error: emailError } = await adminClient.auth.admin.updateUserById(userId, { email: newEmail })
+      if (emailError) return NextResponse.json({ error: emailError.message }, { status: 500 })
+      updates.email = newEmail
+      break
+    case 'change_password':
+      if (!newPassword) return NextResponse.json({ error: 'New password is required' }, { status: 400 })
+      const { error: pwdError } = await adminClient.auth.admin.updateUserById(userId, { password: newPassword })
+      if (pwdError) return NextResponse.json({ error: pwdError.message }, { status: 500 })
+      return NextResponse.json({ success: true, message: 'Password updated successfully' })
     case 'verify':
       updates.is_verified = true
       break
