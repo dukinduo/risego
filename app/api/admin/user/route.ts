@@ -92,11 +92,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   }
 
-  const adminClient = createServiceClient()
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Service role key not configured' }, { status: 501 })
-  }
-
   const { data, error } = await adminClient
     .from('users')
     .update(updates)
