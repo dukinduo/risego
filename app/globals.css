@@ -26,3 +26,27 @@ input {
 input::placeholder {
   color: #94a3b8;
 }
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes heart-pop {
+  0% { transform: scale(0); opacity: 0; }
+  15% { transform: scale(1.2); opacity: 0.9; }
+  30% { transform: scale(0.95); opacity: 1; }
+  45% { transform: scale(1.05); opacity: 1; }
+  80% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+.animate-heart-pop {
+  animation: heart-pop 1s ease-in-out forwards;
+}
+

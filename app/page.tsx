@@ -25,6 +25,7 @@ import {
 import { createBrowserSupabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { VerifiedBadge } from '@/components/VerifiedBadge'
+import { StoryBar } from '@/components/StoryBar'
 
 export default function HomePage() {
   const [user, setUser] = useState<any>(null)
@@ -36,6 +37,7 @@ export default function HomePage() {
   const [caption, setCaption] = useState('')
   const [isPosting, setIsPosting] = useState(false)
   const [posts, setPosts] = useState<any[]>([])
+  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -85,6 +87,16 @@ export default function HomePage() {
         if (followersCount !== null) {
           setFollowerCount(followersCount)
         }
+      }
+
+      // Get Suggested Users for Story Bar
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('*')
+        .limit(12)
+      
+      if (usersData) {
+        setSuggestedUsers(usersData)
       }
 
       // Get Posts with User Info
@@ -399,10 +411,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white pb-20 pt-4 sm:pb-0 sm:pt-0 sm:pl-20 md:pl-64">
       {/* Sidebar Navigation (Desktop) */}
-      <nav className="fixed bottom-0 left-0 z-50 flex w-full border-t border-slate-100 bg-white px-4 py-3 sm:top-0 sm:h-screen sm:w-20 sm:flex-col sm:border-r sm:border-t-0 sm:py-8 md:w-64 md:px-6">
+      <nav className="fixed bottom-0 left-0 z-50 flex w-full border-t border-slate-200 bg-white/90 backdrop-blur-xl px-4 py-3 sm:top-0 sm:h-screen sm:w-20 sm:flex-col sm:border-r sm:border-t-0 sm:py-8 md:w-64 md:px-6">
         <div className="hidden items-center gap-3 mb-12 sm:flex md:px-2">
           <img src="/logo.png" alt="RiseGO" className="h-10 w-auto md:block hidden" />
-          <div className="h-8 w-8 rounded-lg bg-instagram sm:block md:hidden overflow-hidden">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-instagram to-indigo-600 sm:block md:hidden overflow-hidden shadow-lg shadow-instagram/20">
             <img src="/icon.png" alt="RiseGO" className="h-full w-full object-cover" />
           </div>
         </div>
@@ -430,28 +442,34 @@ export default function HomePage() {
       <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-8">
         {activeTab === 'feed' && (
           <div className="max-w-xl mx-auto space-y-8 animate-in fade-in duration-700">
+            {/* Story Bar */}
+            <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-soft">
+              <StoryBar users={suggestedUsers} currentUser={user} />
+            </div>
+
             {/* Castyr Live Featured Ad */}
-            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl overflow-hidden shadow-lg border border-white/10 relative group">
-              <div className="absolute top-4 right-4 z-10">
-                <span className="px-2 py-1 bg-black/20 backdrop-blur-md rounded-lg text-[10px] font-bold text-white uppercase tracking-wider border border-white/10">Sponsored</span>
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/5 relative group p-1">
+              <div className="absolute top-6 right-6 z-10">
+                <span className="px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase tracking-widest border border-white/10 shadow-xl">Sponsored</span>
               </div>
-              <div className="aspect-video w-full overflow-hidden">
-                <img src="/castyr-live.png" alt="Castyr Live" className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
+              <div className="aspect-[16/10] w-full overflow-hidden rounded-[2rem] relative">
+                <img src="/castyr-live.png" alt="Castyr Live" className="w-full h-full object-cover group-hover:scale-105 transition duration-1000" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60" />
               </div>
-              <div className="p-6 text-white">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                    <Camera className="text-white" size={20} />
+              <div className="p-8 text-white relative">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center border border-white/20 shadow-lg shadow-indigo-500/20">
+                    <Camera className="text-white" size={28} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg leading-tight">Go Live Bigger with Castyr Live</h3>
-                    <p className="text-white/60 text-xs">castyr.live</p>
+                    <h3 className="font-black text-2xl leading-tight tracking-tight">Go Live Bigger</h3>
+                    <p className="text-indigo-400 font-bold text-sm">castyr.live</p>
                   </div>
                 </div>
-                <p className="text-sm text-white/80 leading-relaxed mb-6">
+                <p className="text-sm text-slate-300 leading-relaxed mb-8 font-medium">
                   Whether you’re hosting a live event, streaming gameplay, or building your brand, Castyr Live gives you the tools to stream with confidence.
                 </p>
-                <button className="w-full py-3 bg-white text-indigo-600 font-bold rounded-2xl hover:bg-slate-50 transition shadow-xl shadow-indigo-900/20">
+                <button className="w-full py-4 bg-white text-slate-900 font-black rounded-2xl hover:bg-slate-50 transition-all duration-300 shadow-xl hover:shadow-white/10 active:scale-[0.98]">
                   Start Broadcasting Today
                 </button>
               </div>
@@ -900,16 +918,19 @@ function NavButton({ icon, label, active = false, onClick }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center gap-4 rounded-2xl p-3 transition sm:px-4 w-full ${
+      className={`flex items-center gap-4 rounded-2xl p-3 transition-all duration-300 sm:px-4 w-full group ${
         active 
-          ? 'bg-slate-50 text-slate-900' 
+          ? 'bg-slate-100/80 text-slate-900 shadow-sm' 
           : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
       }`}
     >
-      <span className={`flex-shrink-0 ${active ? 'scale-110 transition' : ''}`}>
-        {React.cloneElement(icon as React.ReactElement, { size: 24 })}
+      <span className={`flex-shrink-0 transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>
+        {React.cloneElement(icon as React.ReactElement, { 
+          size: 24,
+          strokeWidth: active ? 2.5 : 2
+        })}
       </span>
-      <span className={`hidden md:block text-sm ${active ? 'font-bold' : 'font-medium'}`}>{label}</span>
+      <span className={`hidden md:block text-sm transition-all duration-300 ${active ? 'font-bold' : 'font-medium opacity-80 group-hover:opacity-100'}`}>{label}</span>
     </button>
   )
 }
@@ -943,6 +964,8 @@ function PostCard({ post }: { post: any }) {
   const displayAvatar = post.users?.avatar_url || post.avatar_url
   const displayIsVerified = post.users?.is_verified ?? post.is_verified
   const [likes, setLikes] = useState<number>(post.likes || 0)
+  const [showHeart, setShowHeart] = useState(false)
+  const [lastTap, setLastTap] = useState(0)
   const [liked, setLiked] = useState<boolean>(() => {
     try {
       if (typeof window === 'undefined') return false
@@ -963,8 +986,9 @@ function PostCard({ post }: { post: any }) {
     try {
       const raw = localStorage.getItem('liked_posts')
       const arr = raw ? (JSON.parse(raw) as string[]) : []
-      if (newLiked) arr.push(post.id)
-      else {
+      if (newLiked) {
+        if (!arr.includes(post.id)) arr.push(post.id)
+      } else {
         const idx = arr.indexOf(post.id)
         if (idx >= 0) arr.splice(idx, 1)
       }
@@ -980,6 +1004,16 @@ function PostCard({ post }: { post: any }) {
     } catch (e) {
       // ignore
     }
+  }
+
+  const handleDoubleTap = () => {
+    const now = Date.now()
+    if (now - lastTap < 300) {
+      if (!liked) toggleLike()
+      setShowHeart(true)
+      setTimeout(() => setShowHeart(false), 1000)
+    }
+    setLastTap(now)
   }
 
   return (
@@ -1014,8 +1048,18 @@ function PostCard({ post }: { post: any }) {
 
       {/* Post Image */}
       {post.image_url && (
-        <div className="aspect-square w-full bg-slate-50 relative overflow-hidden">
+        <div 
+          className="aspect-square w-full bg-slate-50 relative overflow-hidden cursor-pointer"
+          onClick={handleDoubleTap}
+        >
           <img src={post.image_url} alt="Post" className="h-full w-full object-cover" />
+          
+          {/* Animated Heart Overlay */}
+          {showHeart && (
+            <div className="absolute inset-0 flex items-center justify-center animate-heart-pop pointer-events-none">
+              <Heart size={80} className="text-white fill-white drop-shadow-lg" />
+            </div>
+          )}
         </div>
       )}
 
@@ -1023,8 +1067,11 @@ function PostCard({ post }: { post: any }) {
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 text-slate-800">
-            <button className="hover:text-red-500 transition scale-110 active:scale-125">
-              <Heart size={24} />
+            <button 
+              onClick={toggleLike}
+              className={`transition scale-110 active:scale-125 ${liked ? 'text-red-500' : 'hover:text-red-500'}`}
+            >
+              <Heart size={24} fill={liked ? "currentColor" : "none"} />
             </button>
             <button className="hover:text-slate-500 transition">
               <MessageCircle size={24} />
@@ -1039,7 +1086,7 @@ function PostCard({ post }: { post: any }) {
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-sm font-bold text-slate-900">{post.likes.toLocaleString()} likes</p>
+          <p className="text-sm font-bold text-slate-900">{likes.toLocaleString()} likes</p>
           <div className="text-sm">
             <span className="font-bold text-slate-900 mr-2">@{displayUsername}</span>
             <span className="text-slate-700 leading-relaxed">{post.caption}</span>
