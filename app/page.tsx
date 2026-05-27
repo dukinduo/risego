@@ -129,7 +129,8 @@ export default function HomePage() {
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'follows' 
+        table: 'follows',
+        filter: `follower_id=eq.${user.id}`
       }, async () => {
         if (!user?.id) return
         
@@ -588,7 +589,11 @@ export default function HomePage() {
                       </div>
                       {user.id !== result.id && (
                         <button 
-                          onClick={() => handleFollow(result.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            handleFollow(result.id)
+                          }}
                           className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
                             following.includes(result.id)
                               ? 'bg-slate-100 text-slate-900 hover:bg-slate-200'

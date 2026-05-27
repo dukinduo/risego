@@ -81,7 +81,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           .select('*')
           .eq('follower_id', session.user.id)
           .eq('following_id', params.id)
-          .single()
+          .maybeSingle()
         
         setIsFollowing(!!followData)
       }
@@ -90,6 +90,40 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     }
 
     fetchProfileData()
+
+    // Realtime subscription for follower count and status
+    const profileSubscription = supabase
+      .channel(`profile_${params.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'follows',
+        filter: `following_id=eq.${params.id}`
+      }, async () => {
+        // Refresh follower count
+        const { count: followers } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', params.id)
+        setFollowerCount(followers || 0)
+
+        // Refresh isFollowing if it's the current user's action
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          const { data: followData } = await supabase
+            .from('follows')
+            .select('*')
+            .eq('follower_id', session.user.id)
+            .eq('following_id', params.id)
+            .maybeSingle()
+          setIsFollowing(!!followData)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(profileSubscription)
+    }
   }, [params.id, supabase])
 
   const handleFollow = async () => {
