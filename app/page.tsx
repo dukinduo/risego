@@ -310,22 +310,6 @@ export default function HomePage() {
         setFollowingCount(prevCount)
       }
     }
-
-    // Refresh counts from DB to be sure
-    const { count: followers } = await supabase
-      .from('follows')
-      .select('*', { count: 'exact', head: true })
-      .eq('following_id', user.id)
-    if (followers !== null) setFollowerCount(followers)
-
-    const { data: followings } = await supabase
-      .from('follows')
-      .select('following_id')
-      .eq('follower_id', user.id)
-    if (followings) {
-      setFollowing(followings.map((f: any) => f.following_id))
-      setFollowingCount(followings.length)
-    }
   }
 
   const handlePost = async () => {
@@ -1020,22 +1004,22 @@ function PostCard({ post }: { post: any }) {
     <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-soft animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Post Header */}
       <div className="p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            onClick={() => router.push(`/profile/${post.user_id}`)}
-            className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden cursor-pointer"
-          >
+        <div 
+          onClick={() => router.push(`/profile/${post.user_id}`)}
+          className="flex items-center gap-3 cursor-pointer group"
+        >
+          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-50 overflow-hidden">
             {displayAvatar ? (
-              <img src={displayAvatar} alt={displayUsername} className="h-full w-full object-cover" />
+              <img src={displayAvatar} alt={displayUsername} className="h-full w-full object-cover transition group-hover:opacity-80" />
             ) : (
               displayUsername ? displayUsername[0].toUpperCase() : '?'
             )}
           </div>
           <div>
             <div className="flex items-center gap-1">
-              <button onClick={() => router.push(`/profile/${post.user_id}`)} className="text-sm font-bold text-slate-900 cursor-pointer">
+              <span className="text-sm font-bold text-slate-900 group-hover:text-instagram transition">
                 @{displayUsername}
-              </button>
+              </span>
               {displayIsVerified && <VerifiedBadge className="h-4 w-4" />}
             </div>
             <p className="text-[10px] text-slate-400 font-medium">Original audio • 1h</p>
