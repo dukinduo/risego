@@ -23,7 +23,7 @@ import {
   Camera
 } from 'lucide-react'
 import { createBrowserSupabase } from '@/lib/supabase-browser'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { VerifiedBadge } from '@/components/VerifiedBadge'
 import { StoryBar } from '@/components/StoryBar'
 
@@ -54,6 +54,19 @@ export default function HomePage() {
   const [followingCount, setFollowingCount] = useState(0)
   const supabase = createBrowserSupabase()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    const edit = searchParams.get('edit')
+    if (tab) setActiveTab(tab)
+    if (edit === 'true' && user?.profile && !isEditProfileOpen) {
+      setEditUsername(user.profile.username || '')
+      setEditFullName(user.profile.full_name || '')
+      setEditAvatarUrl(user.profile.avatar_url || null)
+      setIsEditProfileOpen(true)
+    }
+  }, [searchParams, user?.profile, isEditProfileOpen])
 
   useEffect(() => {
     async function fetchData() {
@@ -269,7 +282,7 @@ export default function HomePage() {
   }
 
   const handleFollow = async (targetUserId: string) => {
-    if (!user) return
+    if (!user || user.id === targetUserId) return
     
     const isFollowing = following.includes(targetUserId)
     
@@ -462,7 +475,13 @@ export default function HomePage() {
 
             {posts.length > 0 ? (
               posts.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  onFollow={handleFollow}
+                  isFollowing={following.includes(post.user_id)}
+                  currentUserId={user?.id}
+                />
               ))
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
@@ -947,12 +966,25 @@ function SettingsItem({ label, onClick }: any) {
   )
 }
 
-function PostCard({ post }: { post: any }) {
+function PostCard({ 
+  post, 
+  onFollow, 
+  isFollowing, 
+  currentUserId 
+}: { 
+  post: any, 
+  onFollow: (id: string) => void, 
+  isFollowing: boolean,
+  currentUserId?: string 
+}) {
   const router = useRouter()
+  const [commentText, setCommentText] = useState('')
+  const [isCommenting, setIsCommenting] = useState(false)
   const displayUsername = post.users?.username || post.username
   const displayAvatar = post.users?.avatar_url || post.avatar_url
   const displayIsVerified = post.users?.is_verified ?? post.is_verified
   const [likes, setLikes] = useState<number>(post.likes || 0)
+  const [commentsCount, setCommentsCount] = useState<number>(post.comments || 0)
   const [showHeart, setShowHeart] = useState(false)
   const [lastTap, setLastTap] = useState(0)
   const [liked, setLiked] = useState<boolean>(() => {
@@ -995,6 +1027,31 @@ function PostCard({ post }: { post: any }) {
     }
   }
 
+  const handlePostComment = async () => {
+    if (!commentText.trim() || isCommenting) return
+    setIsCommenting(true)
+    
+    // In a real app, we'd save to a comments table. 
+    // Here we'll just increment the count for UI feedback.
+    try {
+      const response = await fetch('/api/posts/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id }),
+      })
+      
+      if (response.ok) {
+        setCommentsCount(prev => prev + 1)
+        setCommentText('')
+        alert('Comment posted (demo)!')
+      }
+    } catch (e) {
+      console.error('Comment error:', e)
+    } finally {
+      setIsCommenting(false)
+    }
+  }
+
   const handleDoubleTap = () => {
     const now = Date.now()
     if (now - lastTap < 300) {
@@ -1026,6 +1083,21 @@ function PostCard({ post }: { post: any }) {
                 @{displayUsername}
               </span>
               {displayIsVerified && <VerifiedBadge className="h-4 w-4" />}
+              
+              {currentUserId && currentUserId !== post.user_id && (
+                <>
+                  <span className="text-slate-300 mx-1.5">•</span>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onFollow(post.user_id)
+                    }}
+                    className={`text-xs font-bold transition ${isFollowing ? 'text-slate-500 hover:text-slate-900' : 'text-instagram hover:text-blue-700'}`}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                </>
+              )}
             </div>
             <p className="text-[10px] text-slate-400 font-medium">Original audio • 1h</p>
           </div>
@@ -1062,7 +1134,7 @@ function PostCard({ post }: { post: any }) {
             >
               <Heart size={24} fill={liked ? "currentColor" : "none"} />
             </button>
-            <button className="hover:text-slate-500 transition">
+            <button className="hover:text-slate-500 transition" onClick={() => document.getElementById(`comment-input-${post.id}`)?.focus()}>
               <MessageCircle size={24} />
             </button>
             <button className="hover:text-instagram transition">
@@ -1080,8 +1152,8 @@ function PostCard({ post }: { post: any }) {
             <span className="font-bold text-slate-900 mr-2">@{displayUsername}</span>
             <span className="text-slate-700 leading-relaxed">{post.caption}</span>
           </div>
-          <button className="text-sm text-slate-400 font-medium block">
-            View all {post.comments} comments
+          <button className="text-sm text-slate-400 font-medium block hover:text-slate-600 transition">
+            View all {commentsCount} comments
           </button>
           <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold pt-1">
             {new Date(post.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
@@ -1099,11 +1171,21 @@ function PostCard({ post }: { post: any }) {
           )}
         </div>
         <input 
+          id={`comment-input-${post.id}`}
           type="text" 
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
           placeholder="Add a comment..." 
           className="flex-1 text-sm outline-none placeholder:text-slate-300"
+          onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
         />
-        <button className="text-instagram font-bold text-xs disabled:opacity-50">Post</button>
+        <button 
+          onClick={handlePostComment}
+          disabled={!commentText.trim() || isCommenting}
+          className="text-instagram font-bold text-xs disabled:opacity-50 hover:text-blue-700 transition"
+        >
+          {isCommenting ? '...' : 'Post'}
+        </button>
       </div>
     </div>
   )

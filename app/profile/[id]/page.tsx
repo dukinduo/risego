@@ -107,6 +107,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           .eq('following_id', params.id)
         setFollowerCount(followers || 0)
 
+        // Refresh following count
+        const { count: following } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('follower_id', params.id)
+        setFollowingCount(following || 0)
+
         // Refresh isFollowing if it's the current user's action
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
@@ -127,8 +134,8 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   }, [params.id, supabase])
 
   const handleFollow = async () => {
-    if (!user) {
-      router.push('/signin')
+    if (!user || user.id === params.id) {
+      if (!user) router.push('/signin')
       return
     }
     
@@ -144,23 +151,25 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         .from('follows')
         .delete()
         .eq('follower_id', user.id)
-        .eq('following_id', profile.id)
+        .eq('following_id', params.id)
       
       if (error) {
         setIsFollowing(prevIsFollowing)
         setFollowerCount(prevFollowerCount)
+        console.error('Error unfollowing:', error.message)
       }
     } else {
       const { error } = await supabase
         .from('follows')
         .insert({
           follower_id: user.id,
-          following_id: profile.id
+          following_id: params.id
         })
       
       if (error) {
         setIsFollowing(prevIsFollowing)
         setFollowerCount(prevFollowerCount)
+        console.error('Error following:', error.message)
       }
     }
   }
@@ -227,10 +236,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               <div className="flex gap-2 justify-center sm:justify-start">
                 {user?.id === profile.id ? (
                   <>
-                    <button className="px-6 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold transition" onClick={() => router.push('/')}>
+                    <button className="px-6 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold transition" onClick={() => router.push('/?tab=profile&edit=true')}>
                       Edit Profile
                     </button>
-                    <button className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition" onClick={() => router.push('/')}>
+                    <button className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition" onClick={() => router.push('/?tab=settings')}>
                       <Settings size={20} />
                     </button>
                   </>
@@ -262,8 +271,8 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             
             <div className="text-sm">
               <p className="font-bold">{profile.full_name}</p>
-              <p className="text-slate-600 whitespace-pre-wrap">Digital Creator • Traveller • Tech Enthusiast</p>
-              <a href="#" className="text-blue-900 font-semibold block mt-1 hover:underline">rise.go/linktree</a>
+              <p className="text-slate-600 whitespace-pre-wrap">Official RiseGO Profile • Digital Creator</p>
+              <a href="#" className="text-blue-900 font-semibold block mt-1 hover:underline">rise.go/{profile.username}</a>
             </div>
           </div>
         </div>
