@@ -3,6 +3,8 @@ import { createServerSupabase } from '@/lib/supabase-server'
 import { AdminUserTable } from '@/components/AdminUserTable'
 import type { Database } from '@/types/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminPage() {
   const supabase = createServerSupabase()
   const {

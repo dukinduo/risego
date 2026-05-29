@@ -1,6 +1,9 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
+export const dynamic = 'force-dynamic'
+
 import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, 
