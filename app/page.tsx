@@ -607,9 +607,17 @@ function HomeContent() {
                   </div>
                 ) : searchResults.length > 0 ? (
                   searchResults.map((result) => (
-                    <div key={result.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition">
-                      <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-50">
-                        {result.username[0].toUpperCase()}
+                    <div 
+                      key={result.id} 
+                      onClick={() => router.push(`/profile/${result.id}`)}
+                      className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition"
+                    >
+                      <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-50 overflow-hidden">
+                        {result.avatar_url ? (
+                          <img src={result.avatar_url} alt={result.username} className="h-full w-full object-cover" />
+                        ) : (
+                          result.username[0].toUpperCase()
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-1">
@@ -1102,9 +1110,14 @@ function PostCard({
                   <button 
                     onClick={(e) => {
                       e.stopPropagation()
+                      e.preventDefault()
                       onFollow(post.user_id)
                     }}
-                    className={`text-xs font-bold transition ${isFollowing ? 'text-slate-500 hover:text-slate-900' : 'text-instagram hover:text-blue-700'}`}
+                    className={`text-xs font-bold transition px-3 py-1 rounded-lg ${
+                      isFollowing 
+                        ? 'text-slate-500 hover:text-slate-900 bg-slate-50' 
+                        : 'text-white bg-instagram hover:bg-blue-600 shadow-sm'
+                    }`}
                   >
                     {isFollowing ? 'Following' : 'Follow'}
                   </button>
