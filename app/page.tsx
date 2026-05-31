@@ -775,6 +775,7 @@ function HomeContent() {
               </SettingsGroup>
               
               <SettingsGroup title="Support">
+                <SettingsItem label="Call Support: 445 253 6115" onClick={() => window.location.href = 'tel:4452536115'} />
                 <SettingsItem label="Help Center" onClick={() => window.open('https://help.risego.com', '_blank')} />
                 <SettingsItem label="Report a Problem" onClick={() => window.location.href = 'mailto:support@risego.com?subject=Report a Problem'} />
                 <SettingsItem label="Terms of Service" onClick={() => alert('Terms of Service: Be kind and respectful.')} />
