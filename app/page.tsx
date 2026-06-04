@@ -149,41 +149,52 @@ function HomeContent() {
   useEffect(() => {
     if (!user?.id) return
 
-    const followsSubscription = supabase
-      .channel('follows_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
+    const refreshFollowing = async () => {
+      const { data: newFollowing } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+
+      if (newFollowing) {
+        setFollowing(newFollowing.map((f: any) => f.following_id))
+        setFollowingCount(newFollowing.length)
+      }
+    }
+
+    const refreshFollowerCount = async () => {
+      const { count: newFollowers } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', user.id)
+
+      if (newFollowers !== null) {
+        setFollowerCount(newFollowers)
+      }
+    }
+
+    const followingChannel = supabase
+      .channel(`follows_following_${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
         table: 'follows',
         filter: `follower_id=eq.${user.id}`
-      }, async () => {
-        if (!user?.id) return
-        
-        // Refresh follower count
-        const { count: newFollowers } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('following_id', user.id)
-        
-        if (newFollowers !== null) {
-          setFollowerCount(newFollowers)
-        }
+      }, refreshFollowing)
+      .subscribe()
 
-        // Refresh following list and count
-        const { data: newFollowing } = await supabase
-          .from('follows')
-          .select('following_id')
-          .eq('follower_id', user.id)
-        
-        if (newFollowing) {
-          setFollowing(newFollowing.map((f: any) => f.following_id))
-          setFollowingCount(newFollowing.length)
-        }
-      })
+    const followerChannel = supabase
+      .channel(`follows_followers_${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'follows',
+        filter: `following_id=eq.${user.id}`
+      }, refreshFollowerCount)
       .subscribe()
 
     return () => {
-      supabase.removeChannel(followsSubscription)
+      supabase.removeChannel(followingChannel)
+      supabase.removeChannel(followerChannel)
     }
   }, [user?.id, supabase])
 
@@ -295,45 +306,61 @@ function HomeContent() {
 
   const handleFollow = async (targetUserId: string) => {
     if (!user || user.id === targetUserId) return
-    
+
     const isFollowing = following.includes(targetUserId)
-    
-    // Optimistic Update
     const prevFollowing = [...following]
     const prevCount = followingCount
-    
+    const newFollowing = isFollowing
+      ? following.filter(id => id !== targetUserId)
+      : [...following, targetUserId]
+
+    setFollowing(newFollowing)
+    setFollowingCount(newFollowing.length)
+
+    const refreshFollowing = async () => {
+      const { data: updatedFollowing } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+
+      if (updatedFollowing) {
+        setFollowing(updatedFollowing.map((f: any) => f.following_id))
+        setFollowingCount(updatedFollowing.length)
+      }
+    }
+
     if (isFollowing) {
-      const newFollowing = following.filter(id => id !== targetUserId)
-      setFollowing(newFollowing)
-      setFollowingCount(newFollowing.length)
-      
       const { error } = await supabase
         .from('follows')
         .delete()
         .eq('follower_id', user.id)
         .eq('following_id', targetUserId)
-      
+
       if (error) {
         console.error('Unfollow error:', error.message)
         setFollowing(prevFollowing)
         setFollowingCount(prevCount)
+      } else {
+        await refreshFollowing()
       }
     } else {
-      const newFollowing = [...following, targetUserId]
-      setFollowing(newFollowing)
-      setFollowingCount(newFollowing.length)
-      
       const { error } = await supabase
         .from('follows')
         .insert({
           follower_id: user.id,
           following_id: targetUserId
         })
-      
+
       if (error) {
-        console.error('Follow error:', error.message)
-        setFollowing(prevFollowing)
-        setFollowingCount(prevCount)
+        if (error.code === '23505') {
+          await refreshFollowing()
+        } else {
+          console.error('Follow error:', error.message)
+          setFollowing(prevFollowing)
+          setFollowingCount(prevCount)
+        }
+      } else {
+        await refreshFollowing()
       }
     }
   }

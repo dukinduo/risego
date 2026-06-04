@@ -94,72 +94,97 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
     fetchProfileData()
 
-    // Realtime subscription for follower count and status
-    const profileSubscription = supabase
-      .channel(`profile_${params.id}`)
+    const refreshFollowerCount = async () => {
+      const { count: followers } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', params.id)
+      setFollowerCount(followers || 0)
+    }
+
+    const refreshFollowingCount = async () => {
+      const { count: following } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', params.id)
+      setFollowingCount(following || 0)
+    }
+
+    const refreshIsFollowing = async () => {
+      if (!user?.id) return
+
+      const { data: followData } = await supabase
+        .from('follows')
+        .select('*')
+        .eq('follower_id', user.id)
+        .eq('following_id', params.id)
+        .maybeSingle()
+      setIsFollowing(!!followData)
+    }
+
+    const followerChannel = supabase
+      .channel(`profile_followers_${params.id}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'follows',
         filter: `following_id=eq.${params.id}`
       }, async () => {
-        // Refresh follower count
-        const { count: followers } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('following_id', params.id)
-        setFollowerCount(followers || 0)
-
-        // Refresh following count
-        const { count: following } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('follower_id', params.id)
-        setFollowingCount(following || 0)
-
-        // Refresh isFollowing if it's the current user's action
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const { data: followData } = await supabase
-            .from('follows')
-            .select('*')
-            .eq('follower_id', session.user.id)
-            .eq('following_id', params.id)
-            .maybeSingle()
-          setIsFollowing(!!followData)
-        }
+        await refreshFollowerCount()
+        await refreshIsFollowing()
       })
       .subscribe()
 
+    const followingChannel = supabase
+      .channel(`profile_following_${params.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'follows',
+        filter: `follower_id=eq.${params.id}`
+      }, refreshFollowingCount)
+      .subscribe()
+
     return () => {
-      supabase.removeChannel(profileSubscription)
+      supabase.removeChannel(followerChannel)
+      supabase.removeChannel(followingChannel)
     }
-  }, [params.id, supabase])
+  }, [params.id, supabase, user?.id])
+
+  const refreshFollowerCount = async () => {
+    const { count: followers } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', params.id)
+    setFollowerCount(followers || 0)
+  }
 
   const handleFollow = async () => {
     if (!user || user.id === params.id) {
       if (!user) router.push('/signin')
       return
     }
-    
+
     const prevIsFollowing = isFollowing
     const prevFollowerCount = followerCount
-    
+
     // Optimistic Update
     setIsFollowing(!isFollowing)
     setFollowerCount(prevFollowerCount + (isFollowing ? -1 : 1))
-    
+
     if (isFollowing) {
       const { error } = await supabase
         .from('follows')
         .delete()
         .eq('follower_id', user.id)
         .eq('following_id', params.id)
-      
+
       if (error) {
         setIsFollowing(prevIsFollowing)
         setFollowerCount(prevFollowerCount)
         console.error('Error unfollowing:', error.message)
+      } else {
+        await refreshFollowerCount()
       }
     } else {
       const { error } = await supabase
@@ -168,11 +193,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           follower_id: user.id,
           following_id: params.id
         })
-      
+
       if (error) {
         setIsFollowing(prevIsFollowing)
         setFollowerCount(prevFollowerCount)
         console.error('Error following:', error.message)
+      } else {
+        await refreshFollowerCount()
       }
     }
   }
