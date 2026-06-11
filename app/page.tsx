@@ -90,6 +90,17 @@ function HomeContent() {
           .select('*')
           .eq('id', session.user.id)
           .single()
+
+        if (profile?.status === 'banned' || profile?.status === 'terminated') {
+          const message = profile.status === 'banned'
+            ? 'Your account is banned. Access is disabled.'
+            : 'Your account has been terminated. Access is disabled.'
+          await supabase.auth.signOut()
+          alert(message)
+          router.push('/signin')
+          return
+        }
+
         setUser({ ...session.user, profile })
 
         // Get Following
@@ -365,6 +376,10 @@ function HomeContent() {
     }
   }
 
+  const handleRemovePost = (postId: string) => {
+    setPosts((current) => current.filter((item) => item.id !== postId))
+  }
+
   const handlePost = async () => {
     if (!caption && !selectedImage) return
     setIsPosting(true)
@@ -520,6 +535,8 @@ function HomeContent() {
                   onFollow={handleFollow}
                   isFollowing={following.includes(post.user_id)}
                   currentUserId={user?.id}
+                  isAdmin={user?.profile?.role === 'admin'}
+                  onRemovePost={handleRemovePost}
                 />
               ))
             ) : (
@@ -1018,16 +1035,21 @@ function PostCard({
   post, 
   onFollow, 
   isFollowing, 
-  currentUserId 
+  currentUserId,
+  isAdmin,
+  onRemovePost
 }: { 
   post: any, 
   onFollow: (id: string) => void, 
   isFollowing: boolean,
-  currentUserId?: string 
+  currentUserId?: string,
+  isAdmin?: boolean,
+  onRemovePost?: (postId: string) => void
 }) {
   const router = useRouter()
   const [commentText, setCommentText] = useState('')
   const [isCommenting, setIsCommenting] = useState(false)
+  const [isTakedownPending, setIsTakedownPending] = useState(false)
   const displayUsername = post.users?.username || post.username
   const displayAvatar = post.users?.avatar_url || post.avatar_url
   const displayIsVerified = post.users?.is_verified ?? post.is_verified
@@ -1100,6 +1122,30 @@ function PostCard({
     }
   }
 
+  const handleTakedown = async () => {
+    if (!isAdmin || !onRemovePost) return
+    if (!window.confirm('Take down this post? This will remove it from the feed for everyone.')) return
+    setIsTakedownPending(true)
+
+    try {
+      const response = await fetch('/api/admin/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id })
+      })
+
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'Unable to take down post')
+
+      onRemovePost(post.id)
+      alert('Post taken down successfully.')
+    } catch (error: any) {
+      alert(`Error taking down post: ${error?.message || 'Unknown error'}`)
+    } finally {
+      setIsTakedownPending(false)
+    }
+  }
+
   const handleDoubleTap = () => {
     const now = Date.now()
     if (now - lastTap < 300) {
@@ -1155,9 +1201,21 @@ function PostCard({
             <p className="text-[10px] text-slate-400 font-medium">Original audio • 1h</p>
           </div>
         </div>
-        <button className="p-2 hover:bg-slate-50 rounded-full transition text-slate-400">
-          <MoreHorizontal size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              disabled={isTakedownPending}
+              type="button"
+              onClick={handleTakedown}
+              className="p-2 rounded-full text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
+          <button className="p-2 hover:bg-slate-50 rounded-full transition text-slate-400">
+            <MoreHorizontal size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Post Image */}
